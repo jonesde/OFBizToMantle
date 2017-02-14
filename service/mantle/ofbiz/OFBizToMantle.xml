@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-2.0.xsd">
+
+    <service verb="import" noun="OFBizData">
+        <!-- in Tools run service 'mantle.ofbiz.OFBizToMantle.import#OFBizData' -->
+        <in-parameters>
+            <parameter name="directoryLocation" required="true"/>
+        </in-parameters>
+        <actions><script><![CDATA[
+            import mantle.ofbiz.OFBizTransform
+            import org.moqui.context.ExecutionContext
+            import org.moqui.etl.FlatXmlExtractor
+            import org.moqui.etl.SimpleEtl
+            import org.moqui.resource.ResourceReference
+            import org.slf4j.Logger
+            import org.slf4j.LoggerFactory
+
+            Logger logger = LoggerFactory.getLogger('OFBizToMantle.importOFBizData')
+            ExecutionContext ec = context.ec
+            ResourceReference dirRef = ec.resource.getLocationReference(directoryLocation)
+
+            for (String entityName in OFBizTransform.loadOrder) {
+                ResourceReference fileRef = dirRef.getChild(entityName + '.xml')
+                if (!fileRef.exists) {
+                    logger.warn("File for entity ${entityName} not found at: ${fileRef.getLocation()}")
+                    continue
+                }
+
+                SimpleEtl.Extractor extractor = new FlatXmlExtractor(fileRef)
+                SimpleEtl.Loader loader = ec.entity.makeEtlLoader().useTryInsert().dummyFks()
+                SimpleEtl etl = new SimpleEtl(extractor, loader).setConfiguration(OFBizTransform.conf)
+                etl.process()
+                if (etl.hasError()) {
+                    logger.error("Error loading ${entityName}", etl.singleErrorCause)
+                    break
+                } else {
+                    logger.info("Loaded ${entityName} in ${etl.runTime}ms (extracted: ${etl.extractCount}, skipped: ${etl.skipCount}, loaded: ${etl.loadCount})")
+                }
+            }
+            ]]></script></actions>
+    </service>
+</services>

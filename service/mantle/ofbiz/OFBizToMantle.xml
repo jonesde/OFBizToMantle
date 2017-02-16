@@ -31,6 +31,8 @@ along with this software (see the LICENSE.md file). If not, see
             Logger logger = LoggerFactory.getLogger('OFBizToMantle.importOFBizData')
             ExecutionContext ec = context.ec
             ResourceReference dirRef = ec.resource.getLocationReference(directoryLocation)
+            int extractCount = 0, skipCount = 0, loadCount = 0, entityCount = 0
+            long startTime = System.currentTimeMillis()
 
             for (String entityName in OFBizTransform.loadOrder) {
                 ResourceReference fileRef = dirRef.getChild(entityName + '.xml')
@@ -48,8 +50,11 @@ along with this software (see the LICENSE.md file). If not, see
                     break
                 } else {
                     logger.info("Loaded ${entityName} in ${etl.runTime}ms (extracted: ${etl.extractCount}, skipped: ${etl.skipCount}, loaded: ${etl.loadCount})")
+                    extractCount += etl.extractCount; skipCount += etl.skipCount; loadCount += etl.loadCount
+                    entityCount++
                 }
             }
+            logger.info("Finished Load of ${entityCount} entities in ${(System.currentTimeMillis() - startTime)/1000}s (extracted: ${extractCount}, skipped: ${skipCount}, loaded: ${loadCount})")
             ]]></script></actions>
     </service>
 </services>

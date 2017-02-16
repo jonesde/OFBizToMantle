@@ -24,8 +24,8 @@ import static mantle.ofbiz.OFBizFieldMap.map
 
 @CompileStatic
 class OFBizTransform {
-    static List<String> loadOrder = ['Party', 'Person', 'PartyGroup', 'PartyRole', 'PartyClassification', 'PartyRelationship', 'UserLogin'
-            /*'ContactMech', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber'*/]
+    static List<String> loadOrder = ['Party', 'Person', 'PartyGroup', 'PartyRole', 'PartyClassification', 'PartyRelationship', 'UserLogin',
+            'ContactMech', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber']
     static List<List<String>> loadOrderParallel = [
             ['Party', 'ContactMech'],
             ['Person', 'PartyGroup', 'PartyRole', 'UserLogin', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber'],
@@ -33,9 +33,48 @@ class OFBizTransform {
 
     static SimpleEtl.TransformConfiguration conf = new SimpleEtl.TransformConfiguration()
     static {
+        /* ========== ContactMech ========== */
+
+        conf.addTransformer("ContactMech", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.party.contact.ContactMech", [contactMechId:val.contactMechId,
+                    contactMechTypeEnumId:map('contactMechTypeId', (String) val.contactMechTypeId),
+                    infoString:val.infoString, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("PartyContactMechPurpose", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // NOTE: for allowSolicitation, extension, comments, etc would have to combine with PartyContactMech
+            et.addEntry(new SimpleEntry("mantle.party.contact.PartyContactMech", [partyId:val.partyId, contactMechId:val.contactMechId,
+                    contactMechPurposeId:map('contactMechPurposeTypeId', (String) val.contactMechPurposeTypeId),
+                    fromDate:val.fromDate, thruDate:val.thruDate, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("PostalAddress", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            Map<String, Object> entryMap = new HashMap<>(val) // most fields match name, rest will be ignored
+            // not importing Geo records, mapping to Moqui ones, may import or map in the future
+            entryMap.remove('cityGeoId'); entryMap.remove('countyGeoId'); entryMap.remove('municipalityGeoId'); entryMap.remove('postalCodeGeoId')
+            entryMap.remove('geoPointId') // may import GeoPoint in future
+            String stateProvinceGeoId = val.stateProvinceGeoId
+            // TODO: do any cleanup on address1, etc?
+            if (stateProvinceGeoId && stateProvinceGeoId.length() == 2) stateProvinceGeoId = 'USA_' + stateProvinceGeoId
+            et.addEntry(new SimpleEntry("mantle.party.contact.PostalAddress", entryMap + ([stateProvinceGeoId:stateProvinceGeoId,
+                    unitNumber:((String) val.houseNumber + (val.houseNumberExt ? '-' + (String) val.houseNumberExt : '')),
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)] as Map<String, Object>)))
+        }})
+        conf.addTransformer("TelecomNumber", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            String cNum = val.contactNumber
+            if (!cNum) { et.loadCurrent(false); return }
+            cNum = cNum.trim()
+            if (!cNum.contains("-") && cNum.length() == 7) cNum = cNum.substring(0,3) + '-' + cNum.substring(3,7)
+            et.addEntry(new SimpleEntry("mantle.party.contact.TelecomNumber", [contactMechId:val.contactMechId,
+                    countryCode:val.countryCode, areaCode:val.areaCode, contactNumber:cNum,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+/*
+
+ */
+        /* ========== Party ========== */
+
         conf.addTransformer("Party", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             et.addEntry(new SimpleEntry("mantle.party.Party", [partyId:val.partyId, partyTypeEnumId:map('partyTypeId', (String) val.partyTypeId),
-                externalId:val.externalId, disabled:("PARTY_DISABLED".equals(val.statusId) ? 'N' : 'Y'), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+                externalId:val.externalId, disabled:("PARTY_DISABLED".equals(val.statusId) ? 'Y' : 'N'), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
         conf.addTransformer("PartyGroup", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             et.addEntry(new SimpleEntry("mantle.party.Organization", [partyId:val.partyId, organizationName:((String) val.groupName)?.trim(),

@@ -28,6 +28,21 @@ class OFBizFieldMap {
         return valueMap.get(value)
     }
     static LinkedHashMap<String, LinkedHashMap<String, String>> fieldValueMaps = [
+        contactMechPurposeTypeId:[BILLING_EMAIL:'EmailBilling', BILLING_LOCATION:'PostalBilling', FACEBOOK_URL:'WebUrlFacebook',
+                FAX_BILLING:'PhoneBillingFax', FAX_NUMBER:'PhoneFax', FAX_NUMBER_SEC:'PhoneFax', FAX_SHIPPING:'PhoneShippingFax',
+                GENERAL_LOCATION:'PostalPrimary', ICAL_URL:'WebUrlICal', LINKEDIN_URL:'WebUrlLinkedIn',
+                MARKETING_EMAIL:'EmailMarketing', ORDER_EMAIL:'EmailOrder', OTHER_EMAIL:'EmailOther', PAYMENT_EMAIL:'EmailPayment',
+                PAYMENT_LOCATION:'PostalPayment', PHONE_ASSISTANT:'PhoneAssistant', PHONE_BILLING:'PhoneBilling',
+                PHONE_DID:'PhoneDid', PHONE_HOME:'PhoneHome', PHONE_MOBILE:'PhoneMobile', PHONE_PAYMENT:'PhonePayment',
+                PHONE_QUICK:'PhoneQuick', PHONE_SHIP_ORIG:'PhoneShippingOrigin', PHONE_SHIPPING:'PhoneShippingDest',
+                PHONE_WORK:'PhoneWork', PHONE_WORK_SEC:'PhoneWork', PREVIOUS_LOCATION:'PostalPrevious', PRIMARY_EMAIL:'EmailPrimary',
+                PRIMARY_LOCATION:'PostalPrimary', PRIMARY_PHONE:'PhonePrimary', PRIMARY_WEB_URL:'WebUrlPrimary',
+                PUR_RET_LOCATION:'PostalPurchReturn', SHIP_ORIG_LOCATION:'PostalShippingOrigin',
+                SHIPPING_LOCATION:'PostalShippingDest', SUPPORT_EMAIL:'EmailSupport', TWITTER_URL:'WebUrlTwitter'],
+        contactMechTypeId:[POSTAL_ADDRESS:'CmtPostalAddress', TELECOM_NUMBER:'CmtTelecomNumber',
+                ELECTRONIC_ADDRESS:'CmtElectronicAddress', EMAIL_ADDRESS:'CmtEmailAddress', IP_ADDRESS:'CmtIpAddress',
+                DOMAIN_NAME:'CmtDomainName', WEB_ADDRESS:'CmtWebAddress'],
+
         partyTypeId:[PERSON:'PtyPerson', PARTY_GROUP:'PtyOrganization'],
         roleTypeId:['_NA_':null, ACCOUNT:'Account', ACCOUNT_LEAD:'AccountLead', LEAD:'AccountLead', AGENT:'Agent',
                 AFFILIATE:'Affiliate', CARRIER:'Carrier', COMPETITOR:'Competitor', CONSUMER:'Consumer', CONTRACTOR:'Contractor',
@@ -52,3 +67,7 @@ class OFBizFieldMap {
                 SPOUSE:'PrtSpouse', SUPPLIER_REL:'PrtSupplier']
     ]
 }
+
+/*
+
+ */

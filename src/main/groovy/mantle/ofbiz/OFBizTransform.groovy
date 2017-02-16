@@ -20,16 +20,22 @@ import org.moqui.etl.SimpleEtl
 import org.moqui.etl.SimpleEtl.EntryTransform
 import org.moqui.etl.SimpleEtl.SimpleEntry
 import org.moqui.etl.SimpleEtl.Transformer
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
 import static mantle.ofbiz.OFBizFieldMap.map
 
 @CompileStatic
 class OFBizTransform {
+    static Logger logger = LoggerFactory.getLogger(OFBizTransform.class)
+
     static List<String> loadOrder = ['Party', 'Person', 'PartyGroup', 'PartyRole', 'PartyClassification', 'PartyRelationship', 'UserLogin',
-            'ContactMech', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber']
+            'ContactMech', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
+            'PaymentMethod', 'CreditCard']
     static List<List<String>> loadOrderParallel = [
             ['Party', 'ContactMech'],
-            ['Person', 'PartyGroup', 'PartyRole', 'UserLogin', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber'],
-            ['PartyClassification', 'PartyRelationship']]
+            ['Person', 'PartyGroup', 'PartyRole', 'UserLogin', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber', 'PaymentMethod'],
+            ['PartyClassification', 'PartyRelationship', 'CreditCard']]
 
     static SimpleEtl.TransformConfiguration conf = new SimpleEtl.TransformConfiguration()
     static {
@@ -67,9 +73,7 @@ class OFBizTransform {
                     countryCode:val.countryCode, areaCode:val.areaCode, contactNumber:cNum,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
-/*
 
- */
         /* ========== Party ========== */
 
         conf.addTransformer("Party", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
@@ -139,6 +143,29 @@ class OFBizTransform {
                 currencyUomId:val.lastCurrencyUom, locale:val.lastLocale, timeZone:val.lastTimeZone,
                 currentPassword:currentPassword, passwordHashType:passwordHashType, passwordSetDate:((String) val.lastUpdatedTxStamp).take(23),
                 lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+
+        /* ========== PaymentMethod ========== */
+        conf.addTransformer("PaymentMethod", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.account.method.PaymentMethod", [paymentMethodId:val.paymentMethodId,
+                    paymentMethodTypeEnumId:map('paymentMethodTypeId', (String) val.paymentMethodTypeId),
+                    ownerPartyId:val.partyId, description:val.description, fromDate:val.fromDate, thruDate:val.thruDate,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            if (val.glAccountId) logger.warn("Found glAccountId ${val.glAccountId} in PaymentMethod ${val.paymentMethodId}")
+            // TODO: skipping glAccountId for now, needs GlAccount mapping
+            // NOTE: skipping finAccountId for now, needs FinAccount transformer
+        }})
+        conf.addTransformer("CreditCard", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.account.method.PaymentMethod", [paymentMethodId:val.paymentMethodId,
+                    companyNameOnAccount:val.companyNameOnCard, titleOnAccount:val.titleOnCard,
+                    firstNameOnAccount:val.firstNameOnCard, middleNameOnAccount:val.middleNameOnCard,
+                    lastNameOnAccount:val.lastNameOnCard, suffixOnAccount:val.suffixOnCard, postalContactMechId:val.contactMechId]))
+            et.addEntry(new SimpleEntry("mantle.account.method.CreditCard", [paymentMethodId:val.paymentMethodId,
+                    creditCardTypeEnumId:map('cardType', ((String) val.cardType)), cardNumber:val.cardNumber,
+                    validFromDate:val.validFromDate, expireDate:val.expireDate, issueNumber:val.issueNumber,
+                    consecutiveFailedAuths:val.consecutiveFailedAuths, lastFailedAuthDate:val.lastFailedAuthDate,
+                    consecutiveFailedNsf:val.consecutiveFailedNsf, lastFailedNsfDate:val.lastFailedNsfDate,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
 
         /*

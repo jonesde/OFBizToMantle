@@ -64,10 +64,16 @@ class OFBizFieldMap {
         partyRelationshipTypeId:[ACCOUNT:'PrtCustomer', AGENT:'PrtAgent', CHILD:'PrtChild', CONTACT_REL:'PrtContact',
                 CUSTOMER_REL:'PrtCustomer', EMPLOYMENT:'PrtEmployee', FRIEND:'PrtFriend', GROUP_ROLLUP:'PrtOrgRollup',
                 LEAD_OWNER:'PrtCustomer', MANAGER:'PrtManager', SALES_AFFILIATE:'PrtSalesAffiliate', SALES_REP:'PrtRepresentative',
-                SPOUSE:'PrtSpouse', SUPPLIER_REL:'PrtSupplier']
+                SPOUSE:'PrtSpouse', SUPPLIER_REL:'PrtSupplier'],
+
+        paymentMethodTypeId:[CERTIFIED_CHECK:'PmtBankAccount', COMPANY_CHECK:'PmtBankAccount', EFT_ACCOUNT:'PmtBankAccount',
+                CREDIT_CARD:'PmtCreditCard', FIN_ACCOUNT:'PmtFinancialAccount', GIFT_CARD:'PmtGiftCard', PERSONAL_CHECK:'PmtBankAccount'],
+            // ADJUSTMENT,CASH,COMPANY_ACCOUNT,EXT_AMAZON,EXT_AUTHORIZE_NET,EXT_BILLACT,EXT_COD,EXT_EBAY,EXT_IDEAL,EXT_OFFLINE,EXT_PAYPAL,EXT_WORLDPAY,GIFT_CERTIFICATE,MONEY_ORDER,PETTY_CASH
+        cardType:[AmericanExpress:'CctAmericanExpress', Discover:'CctDiscover', MasterCard:'CctMastercard', Visa:'CctVisa']
     ]
 }
 
 /*
+
 
  */

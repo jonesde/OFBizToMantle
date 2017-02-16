@@ -32,10 +32,11 @@ class OFBizTransform {
     static List<String> loadOrder = ['Party', 'Person', 'PartyGroup', 'PartyRole', 'PartyClassification', 'PartyRelationship', 'UserLogin',
             'ContactMech', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
             'PaymentMethod', 'CreditCard',
-            'Product']
+            'Product', 'ProductPrice']
     static List<List<String>> loadOrderParallel = [
             ['Party', 'ContactMech', 'Product'],
-            ['Person', 'PartyGroup', 'PartyRole', 'UserLogin', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber', 'PaymentMethod'],
+            ['Person', 'PartyGroup', 'PartyRole', 'UserLogin', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
+                    'PaymentMethod', 'ProductPrice'],
             ['PartyClassification', 'PartyRelationship', 'CreditCard']]
 
     static SimpleEtl.TransformConfiguration conf = new SimpleEtl.TransformConfiguration()
@@ -203,6 +204,15 @@ class OFBizTransform {
                     dimensionTypeId:'QuantityIncluded', value:val.quantityIncluded, valueUomId:(val.quantityUomId == 'OTH_pk' ? 'OTH_ct' : val.quantityUomId)]))
             if (val.piecesIncluded) et.addEntry(new SimpleEntry("mantle.product.ProductDimension", [productId:val.productId,
                     dimensionTypeId:'PiecesIncluded', value:val.piecesIncluded, valueUomId:'OTH_ea']))
+        }})
+        conf.addTransformer("ProductPrice", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            String productPriceId = ((String) val.productId) + '_' + ((String) val.productPriceTypeId).substring(0,1) + '_' + ((String) val.currencyUomId) + '_' + ((String) val.productStoreGroupId) + '_' + ((String) val.fromDate).substring(20)
+            if (val.productPricePurposeId != 'PURCHASE') { logger.info("Skipping ProductPrice ${productPriceId} of purpose ${val.productPricePurposeId}"); et.loadCurrent(false); return }
+            String priceTypeEnumId = OFBizFieldMap.get('productPriceTypeId', (String) val.productPriceTypeId)
+            if (!priceTypeEnumId) { logger.info("Skipping ProductPrice ${productPriceId} of type ${val.productPriceTypeId}"); et.loadCurrent(false); return }
+            et.addEntry(new SimpleEntry("mantle.product.ProductPrice", [productPriceId:productPriceId, productId:val.productId,
+                    priceTypeEnumId:priceTypeEnumId, pricePurposeEnumId:'PppPurchase', fromDate:val.fromDate, thruDate:val.thruDate,
+                    price:val.price, priceUomId:val.currencyUomId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
 
         /*

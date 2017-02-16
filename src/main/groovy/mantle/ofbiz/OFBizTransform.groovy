@@ -15,7 +15,6 @@ package mantle.ofbiz
 
 import groovy.transform.CompileStatic
 import org.moqui.Moqui
-import org.moqui.context.ExecutionContext
 import org.moqui.etl.SimpleEtl
 import org.moqui.etl.SimpleEtl.EntryTransform
 import org.moqui.etl.SimpleEtl.SimpleEntry
@@ -32,12 +31,15 @@ class OFBizTransform {
     static List<String> loadOrder = ['Party', 'Person', 'PartyGroup', 'PartyRole', 'PartyClassification', 'PartyRelationship', 'UserLogin',
             'ContactMech', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
             'PaymentMethod', 'CreditCard',
-            'Product', 'ProductPrice']
+            'Product', 'ProductPrice', 'Lot', 'InventoryItem', 'PhysicalInventory' /* 'OrderItemShipGrpInvRes', 'ItemIssuance', 'ShipmentReceipt', 'InventoryItemDetail' */]
     static List<List<String>> loadOrderParallel = [
-            ['Party', 'ContactMech', 'Product'],
+            ['Party', 'ContactMech', 'Product', 'Lot'],
             ['Person', 'PartyGroup', 'PartyRole', 'UserLogin', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
-                    'PaymentMethod', 'ProductPrice'],
-            ['PartyClassification', 'PartyRelationship', 'CreditCard']]
+                    'PaymentMethod', 'ProductPrice', 'InventoryItem', 'PhysicalInventory'],
+            ['PartyClassification', 'PartyRelationship', 'CreditCard']
+            /* 'OrderItemShipGrpInvRes', 'ItemIssuance', 'ShipmentReceipt' */
+            /* 'InventoryItemDetail' */
+    ]
 
     static SimpleEtl.TransformConfiguration conf = new SimpleEtl.TransformConfiguration()
     static {
@@ -63,6 +65,7 @@ class OFBizTransform {
             String stateProvinceGeoId = val.stateProvinceGeoId
             // TODO: do any cleanup on address1, etc?
             if (stateProvinceGeoId && stateProvinceGeoId.length() == 2) {
+                // NOTE: this only handles USA and CAN states/provinces which had no prefix in OFBiz
                 if (stateProvinceGeoId in ['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT']) stateProvinceGeoId = 'CAN_' + stateProvinceGeoId
                 else stateProvinceGeoId = 'USA_' + stateProvinceGeoId
             }
@@ -79,9 +82,79 @@ class OFBizTransform {
                     countryCode:val.countryCode, areaCode:val.areaCode, contactNumber:cNum,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
-        /*
 
-         */
+        /* ========== Inventory ========== */
+
+        conf.addTransformer("Lot", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.product.asset.Lot", [lotId:val.lotId, creationDate:val.creationDate,
+                    manufacturedDate:val.creationDate, quantity:val.quantity, expirationDate:((String) val.expirationDate)?.take(10),
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp)?.take(23)]))
+        }})
+        conf.addTransformer("InventoryItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // some example key cleanup
+            String locationSeqId = val.locationSeqId
+            if (locationSeqId) { int spaceIdx = locationSeqId.indexOf(" "); if (spaceIdx > 0) locationSeqId = locationSeqId.substring(0, spaceIdx) }
+            et.addEntry(new SimpleEntry("mantle.product.asset.Asset", [assetId:val.inventoryItemId, productId:val.productId,
+                    hasQuantity:(val.inventoryItemTypeId == 'SERIALIZED_INV_ITEM' ? 'N' : 'Y'), ownerPartyId:val.ownerPartyId,
+                    facilityId:val.facilityId, locationSeqId:locationSeqId, statusId:map('inventoryStatusId', (String) val.statusId),
+                    receivedDate:val.datetimeReceived, manufacturedDate:val.datetimeManufactured, expectedEndOfLife:((String) val.expireDate)?.take(10),
+                    lotId:val.lotId, comments:val.comments, quantityOnHandTotal:val.quantityOnHandTotal,
+                    availableToPromiseTotal:val.availableToPromiseTotal, serialNumber:val.serialNumber,
+                    softIdentifier:val.softIdentifier, activationNumber:val.activationNumber, activationValidThru:val.activationValidThru,
+                    acquireCost:val.unitCost, acquireCostUomId:val.currencyUomId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // NOTE: facilityId passed through as-is, assuming Facility already exists (currently no transform for it)
+            // NOTE: locationSeqId passed through cleaned up, assuming FacilityLocation already exists (currently no transform for it)
+            // NOTE: containerId not yet handled, need to also transform Container before this
+        }})
+        conf.addTransformer("InventoryItemDetail", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // needs: Asset, Shipment, Return, AssetIssuance, AssetReceipt, PhysicalInventory
+            String productId = Moqui.executionContext.entity.find("mantle.product.asset.Asset").condition("assetId", val.inventoryItemId).one()?.productId
+            et.addEntry(new SimpleEntry("mantle.product.asset.AssetDetail", [
+                    assetDetailId:((String) val.inventoryItemId) + ((String) val.inventoryItemDetailSeqId),
+                    assetId:val.inventoryItemId, productId:productId, effectiveDate:val.effectiveDate, unitCost:val.unitCost,
+                    quantityOnHandDiff:val.quantityOnHandDiff, availableToPromiseDiff:val.availableToPromiseDiff,
+                    shipmentId:val.shipmentId, returnId:val.returnId, returnItemSeqId:val.returnItemSeqId,
+                    assetIssuanceId:val.itemIssuanceId, assetReceiptId:val.receiptId, physicalInventoryId:val.physicalInventoryId,
+                    varianceReasonEnumId:map('varianceReasonEnumId', (String) val.reasonEnumId), description:val.description,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // NOTE: workEffortId not yet handled, need to also transform WorkEffort for this
+        }})
+
+        conf.addTransformer("PhysicalInventory", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.product.asset.PhysicalInventory", [physicalInventoryId:val.physicalInventoryId,
+                    physicalInventoryDate:val.physicalInventoryDate, partyId:val.partyId, comments:val.generalComments,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+
+        conf.addTransformer("OrderItemShipGrpInvRes", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // needs: Asset, OrderItem
+            String productId = Moqui.executionContext.entity.find("mantle.product.asset.Asset").condition("assetId", val.inventoryItemId).one()?.productId
+            et.addEntry(new SimpleEntry("mantle.product.issuance.AssetReservation", [assetReservationId:UUID.randomUUID().toString(),
+                    assetId:val.inventoryItemId, orderId:val.orderId, orderItemSeqId:val.orderItemSeqId, productId:productId,
+                    quantity:val.quantity, quantityNotAvailable:val.quantityNotAvailable, reservedDate:val.reservedDatetime,
+                    originalPromisedDate:val.promisedDatetime, currentPromisedDate:val.currentPromisedDate,
+                    priority:(val.priority == 'Y' ? 10 : 0), sequenceNum:val.sequenceId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // NOTE: not mapping reserveOrderEnumId
+        }})
+        conf.addTransformer("ItemIssuance", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // needs: Asset, OrderItem, Shipment
+            String productId = Moqui.executionContext.entity.find("mantle.product.asset.Asset").condition("assetId", val.inventoryItemId).one()?.productId
+            et.addEntry(new SimpleEntry("mantle.product.issuance.AssetIssuance", [assetIssuanceId:val.itemIssuanceId,
+                    assetId:val.inventoryItemId, orderId:val.orderId, orderItemSeqId:val.orderItemSeqId, shipmentId:val.shipmentId,
+                    productId:productId, issuedDate:val.issuedDateTime, quantity:val.quantity, quantityCancelled:val.cancelQuantity,
+                    issuedByUserId:val.issuedByUserLoginId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("ShipmentReceipt", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // needs: Asset, OrderItem, Shipment, ReturnItem
+            et.addEntry(new SimpleEntry("mantle.product.issuance.AssetReceipt", [assetReceiptId:val.receiptId,
+                    assetId:val.inventoryItemId, productId:val.productId, orderId:val.orderId, orderItemSeqId:val.orderItemSeqId,
+                    shipmentId:val.shipmentId, shipmentPackageSeqId:val.shipmentPackageSeqId, returnId:val.returnId,
+                    returnItemSeqId:val.returnItemSeqId, rejectionReasonEnumId:map('rejectionId', (String) val.rejectionId),
+                    receivedByUserId:val.receivedByUserLoginId, receivedDate:val.datetimeReceived, itemDescription:val.itemDescription,
+                    quantityAccepted:val.quantityAccepted, quantityRejected:val.quantityRejected,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+
         /* ========== Party ========== */
 
         conf.addTransformer("Party", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
@@ -110,8 +183,8 @@ class OFBizTransform {
             if ("_NA_".equals(roleTypeId)) { et.loadCurrent(false); return }
             String rtMapped = OFBizFieldMap.get('roleTypeId', roleTypeId)
             if (rtMapped == null) {
-                ExecutionContext ec = Moqui.getExecutionContext()
-                if (ec.entity.find("mantle.party.RoleType").condition("roleTypeId", roleTypeId).useCache(true).one() == null) {
+                if (Moqui.executionContext.entity.find("mantle.party.RoleType").condition("roleTypeId", roleTypeId).useCache(true).one() == null) {
+                    logger.info("Adding RoleType ${roleTypeId}")
                     et.addEntry(new SimpleEntry("mantle.party.RoleType", [roleTypeId:roleTypeId,
                             description:roleTypeId.split("_").collect({ ((String) it).toLowerCase().capitalize() }).join(" ")] as Map<String, Object>))
                 }
@@ -212,14 +285,11 @@ class OFBizTransform {
             if (!priceTypeEnumId) { logger.info("Skipping ProductPrice ${productPriceId} of type ${val.productPriceTypeId}"); et.loadCurrent(false); return }
             et.addEntry(new SimpleEntry("mantle.product.ProductPrice", [productPriceId:productPriceId, productId:val.productId,
                     priceTypeEnumId:priceTypeEnumId, pricePurposeEnumId:'PppPurchase', fromDate:val.fromDate, thruDate:val.thruDate,
-                    price:val.price, priceUomId:val.currencyUomId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+                    price:val.price, priceUomId:val.currencyUomId, minQuantity:1.0, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
 
-        /*
+        /* =========== Custom Transformer Examples =========== */
 
-         */
-
-        // =========== Custom Transformers ===========
         conf.addTransformer("PartyClassification", new Transformer() { void transform(EntryTransform et) {
             Map<String, Object> val = et.entry.etlValues
             String partyClassificationGroupId = val.partyClassificationGroupId

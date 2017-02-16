@@ -71,7 +71,7 @@ class OFBizFieldMap {
             // ADJUSTMENT,CASH,COMPANY_ACCOUNT,EXT_AMAZON,EXT_AUTHORIZE_NET,EXT_BILLACT,EXT_COD,EXT_EBAY,EXT_IDEAL,EXT_OFFLINE,EXT_PAYPAL,EXT_WORLDPAY,GIFT_CERTIFICATE,MONEY_ORDER,PETTY_CASH
         cardType:[AmericanExpress:'CctAmericanExpress', Discover:'CctDiscover', MasterCard:'CctMastercard', Visa:'CctVisa'],
 
-        // these 3 based on Product.productTypeId
+        // productTypeEnumId, assetTypeEnumId, and assetClassEnumId based on Product.productTypeId
         productTypeEnumId:[ASSET_USAGE:'PtAssetUse', ASSET_USAGE_OUT_IN:'PtAssetUse', DIGITAL_GOOD:'PtDigital',
                 FINDIG_GOOD:'PtDigitalAsset', FINISHED_GOOD:'PtAsset', GOOD:'PtAsset', RAW_MATERIAL:'PtAsset', SERVICE:'PtService',
                 SERVICE_PRODUCT:'PtService', SUBASSEMBLY:'PtAsset', WIP:'PtAsset'],
@@ -79,10 +79,19 @@ class OFBizFieldMap {
                 RAW_MATERIAL:'AstTpInventory', SERVICE_PRODUCT:'AstTpInventory', SUBASSEMBLY:'AstTpInventory', WIP:'AstTpInventory'],
         assetClassEnumId:[FINDIG_GOOD:'AsClsInventoryFin', FINISHED_GOOD:'AsClsInventoryFin', GOOD:'AsClsInventoryFin',
                 RAW_MATERIAL:'AsClsInventoryRaw', SERVICE_PRODUCT:'AsClsInventoryFin', SUBASSEMBLY:'AsClsInventorySub', WIP:'AsClsInventorySub'],
-        productPriceTypeId:[DEFAULT_PRICE:'PptCurrent', LIST_PRICE:'PptList']
+        productPriceTypeId:[DEFAULT_PRICE:'PptCurrent', LIST_PRICE:'PptList'],
+
+        inventoryStatusId:[INV_ACTIVATED:'AstActivated', INV_AVAILABLE:'AstAvailable', INV_BEING_TRANSFERED:'AstInTransfer',
+                INV_BEING_TRANS_PRM:'AstInTransferPromise', INV_DEACTIVATED:'AstDeactivated', INV_DEFECTIVE:'AstDefective',
+                INV_DELIVERED:'AstDelivered', INV_NS_DEFECTIVE:'AstDefective', INV_NS_ON_HOLD:'AstOnHold', INV_NS_RETURNED:'AstReturned'],
+        varianceReasonEnumId:[VAR_DAMAGED:'InVrDamaged', VAR_FOUND:'InVrFound', VAR_INTEGR:'InVrIntegration', VAR_LOST:'InVrLost',
+                VAR_MISSHIP_ORDERED:'InVrMisShipOrdered', VAR_MISSHIP_SHIPPED:'InVrMisShipShipped', VAR_SAMPLE:'InVrSample', VAR_STOLEN:'InVrStolen'],
+        rejectionId:[SRJ_DAMAGED:'ArjDamaged', SRJ_LOST_INTRANS:'ArjLost', SRJ_NOT_ORDERED:'ArjNotOrdered',
+                SRJ_NOT_SPEC:'ArjNotToSpec', SRJ_OVER_SHIPPED:'ArjOverShipped']
     ]
 }
 
 /*
+
 
  */

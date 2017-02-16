@@ -34,6 +34,9 @@ along with this software (see the LICENSE.md file). If not, see
             int extractCount = 0, skipCount = 0, loadCount = 0, entityCount = 0
             long startTime = System.currentTimeMillis()
 
+            // disable EECA rules
+            ec.artifactExecution.disableEntityEca()
+
             for (String entityName in OFBizTransform.loadOrder) {
                 ResourceReference fileRef = dirRef.getChild(entityName + '.xml')
                 if (!fileRef.exists) {

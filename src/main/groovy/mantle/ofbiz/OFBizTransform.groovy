@@ -31,9 +31,10 @@ class OFBizTransform {
 
     static List<String> loadOrder = ['Party', 'Person', 'PartyGroup', 'PartyRole', 'PartyClassification', 'PartyRelationship', 'UserLogin',
             'ContactMech', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
-            'PaymentMethod', 'CreditCard']
+            'PaymentMethod', 'CreditCard',
+            'Product']
     static List<List<String>> loadOrderParallel = [
-            ['Party', 'ContactMech'],
+            ['Party', 'ContactMech', 'Product'],
             ['Person', 'PartyGroup', 'PartyRole', 'UserLogin', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber', 'PaymentMethod'],
             ['PartyClassification', 'PartyRelationship', 'CreditCard']]
 
@@ -42,9 +43,10 @@ class OFBizTransform {
         /* ========== ContactMech ========== */
 
         conf.addTransformer("ContactMech", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            String contactMechTypeEnumId = OFBizFieldMap.get('contactMechTypeId', (String) val.contactMechTypeId)
+            if (!contactMechTypeEnumId) { logger.info("Skipping ContactMech ${val.contactMechId} of type ${val.contactMechTypeId}"); et.loadCurrent(false); return }
             et.addEntry(new SimpleEntry("mantle.party.contact.ContactMech", [contactMechId:val.contactMechId,
-                    contactMechTypeEnumId:map('contactMechTypeId', (String) val.contactMechTypeId),
-                    infoString:val.infoString, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+                    contactMechTypeEnumId:contactMechTypeEnumId, infoString:val.infoString, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
         conf.addTransformer("PartyContactMechPurpose", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // NOTE: for allowSolicitation, extension, comments, etc would have to combine with PartyContactMech
@@ -59,7 +61,10 @@ class OFBizTransform {
             entryMap.remove('geoPointId') // may import GeoPoint in future
             String stateProvinceGeoId = val.stateProvinceGeoId
             // TODO: do any cleanup on address1, etc?
-            if (stateProvinceGeoId && stateProvinceGeoId.length() == 2) stateProvinceGeoId = 'USA_' + stateProvinceGeoId
+            if (stateProvinceGeoId && stateProvinceGeoId.length() == 2) {
+                if (stateProvinceGeoId in ['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT']) stateProvinceGeoId = 'CAN_' + stateProvinceGeoId
+                else stateProvinceGeoId = 'USA_' + stateProvinceGeoId
+            }
             et.addEntry(new SimpleEntry("mantle.party.contact.PostalAddress", entryMap + ([stateProvinceGeoId:stateProvinceGeoId,
                     unitNumber:((String) val.houseNumber + (val.houseNumberExt ? '-' + (String) val.houseNumberExt : '')),
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)] as Map<String, Object>)))
@@ -73,7 +78,9 @@ class OFBizTransform {
                     countryCode:val.countryCode, areaCode:val.areaCode, contactNumber:cNum,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
+        /*
 
+         */
         /* ========== Party ========== */
 
         conf.addTransformer("Party", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
@@ -146,9 +153,12 @@ class OFBizTransform {
         }})
 
         /* ========== PaymentMethod ========== */
+
         conf.addTransformer("PaymentMethod", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            String paymentMethodTypeEnumId = OFBizFieldMap.get('paymentMethodTypeId', (String) val.paymentMethodTypeId)
+            if (!paymentMethodTypeEnumId) { logger.info("Skipping PaymentMethod ${val.paymentMethodId} of type ${val.paymentMethodTypeId}"); et.loadCurrent(false); return }
             et.addEntry(new SimpleEntry("mantle.account.method.PaymentMethod", [paymentMethodId:val.paymentMethodId,
-                    paymentMethodTypeEnumId:map('paymentMethodTypeId', (String) val.paymentMethodTypeId),
+                    paymentMethodTypeEnumId:paymentMethodTypeEnumId,
                     ownerPartyId:val.partyId, description:val.description, fromDate:val.fromDate, thruDate:val.thruDate,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
             if (val.glAccountId) logger.warn("Found glAccountId ${val.glAccountId} in PaymentMethod ${val.paymentMethodId}")
@@ -166,6 +176,33 @@ class OFBizTransform {
                     consecutiveFailedAuths:val.consecutiveFailedAuths, lastFailedAuthDate:val.lastFailedAuthDate,
                     consecutiveFailedNsf:val.consecutiveFailedNsf, lastFailedNsfDate:val.lastFailedNsfDate,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+
+        /* ========== Product ========== */
+
+        conf.addTransformer("Product", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            String productTypeEnumId = OFBizFieldMap.get('productTypeEnumId', (String) val.productTypeId)
+            if (!productTypeEnumId) { logger.info("Skipping Product ${val.productId} of type ${val.productTypeId}"); et.loadCurrent(false); return }
+            // NOTE: this is a very simple transform, not yet near complete for Product
+            et.addEntry(new SimpleEntry("mantle.product.Product", [productId:val.productId, productTypeEnumId:productTypeEnumId,
+                    assetTypeEnumId:OFBizFieldMap.get('productTypeEnumId', (String) val.productTypeId),
+                    assetClassEnumId:OFBizFieldMap.get('productTypeEnumId', (String) val.productTypeId),
+                    productName:val.productName, description:val.description, comments:val.comments,
+                    salesIntroductionDate:val.introductionDate, salesDiscontinuationDate:val.salesDiscontinuationDate,
+                    supportDiscontinuationDate:val.supportDiscontinuationDate, salesDiscWhenNotAvail:val.salesDiscWhenNotAvail,
+                    requireInventory:val.requireInventory, amountFixed:val.quantityIncluded, amountRequire:val.requireAmount,
+                    amountUomId:(val.quantityUomId == 'OTH_pk' ? 'OTH_ct' : val.quantityUomId),
+                    taxable:val.taxable, chargeShipping:val.chargeShipping, inShippingBox:val.inShippingBox,
+                    returnable:val.returnable, originGeoId:val.originGeoId,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            if (val.weight) et.addEntry(new SimpleEntry("mantle.product.ProductDimension", [productId:val.productId,
+                    dimensionTypeId:'Weight', value:val.weight, valueUomId:val.weightUomId]))
+            if (val.shippingWeight) et.addEntry(new SimpleEntry("mantle.product.ProductDimension", [productId:val.productId,
+                    dimensionTypeId:'ShippingWeight', value:val.shippingWeight, valueUomId:val.weightUomId]))
+            if (val.quantityIncluded) et.addEntry(new SimpleEntry("mantle.product.ProductDimension", [productId:val.productId,
+                    dimensionTypeId:'QuantityIncluded', value:val.quantityIncluded, valueUomId:(val.quantityUomId == 'OTH_pk' ? 'OTH_ct' : val.quantityUomId)]))
+            if (val.piecesIncluded) et.addEntry(new SimpleEntry("mantle.product.ProductDimension", [productId:val.productId,
+                    dimensionTypeId:'PiecesIncluded', value:val.piecesIncluded, valueUomId:'OTH_ea']))
         }})
 
         /*

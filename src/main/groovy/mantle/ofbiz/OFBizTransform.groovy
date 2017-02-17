@@ -15,6 +15,8 @@ package mantle.ofbiz
 
 import groovy.transform.CompileStatic
 import org.moqui.Moqui
+import org.moqui.entity.EntityList
+import org.moqui.entity.EntityValue
 import org.moqui.etl.SimpleEtl
 import org.moqui.etl.SimpleEtl.EntryTransform
 import org.moqui.etl.SimpleEtl.SimpleEntry
@@ -29,11 +31,15 @@ class OFBizTransform {
     static Logger logger = LoggerFactory.getLogger(OFBizTransform.class)
 
     static List<List<String>> loadOrderParallel = [
-            ['Party', 'ContactMech', 'Product', 'Lot'],
-            ['Person', 'PartyGroup', 'PartyRole', 'UserLogin', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
-                    'PaymentMethod', 'ProductPrice', 'InventoryItem', 'PhysicalInventory'],
-            ['PartyClassification', 'PartyRelationship', 'CreditCard']
-            /* 'OrderItemShipGrpInvRes', 'ItemIssuance', 'ShipmentReceipt' */
+            ['Party', 'ContactMech', 'Product', 'Lot', 'OrderHeader'],
+            ['Person', 'PartyGroup', 'PartyRole', 'UserLogin',
+                    'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber', 'PaymentMethod',
+                    'ProductPrice', 'InventoryItem', 'PhysicalInventory',
+                    'OrderItemShipGroup'],
+            ['PartyClassification', 'PartyRelationship', 'CreditCard',
+                    'OrderRole', 'OrderContactMech', 'OrderItem'],
+            ['OrderAdjustment', 'OrderPaymentPreference', 'OrderItemShipGrpInvRes']
+            /* 'ItemIssuance', 'ShipmentReceipt' */
             /* 'InventoryItemDetail' */
     ]
 
@@ -153,38 +159,102 @@ class OFBizTransform {
 
         /* ========== Order ========== */
 
-/*
-OrderHeader
+        conf.addTransformer("OrderHeader", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.order.OrderHeader", [orderId:val.orderId, orderName:val.orderName, orderRevision:1,
+                    salesChannelEnumId:map('salesChannelEnumId', (String) val.salesChannelEnumId),
+                    statusId:map('orderStatusId', (String) val.statusId),
+                    currencyUomId:val.currencyUom, entryDate:val.entryDate, placedDate:val.orderDate, externalId:val.externalId,
+                    terminalId:val.terminalId, parentOrderId:val.firstAttemptOrderId, remainingSubTotal:val.remainingSubTotal,
+                    grandTotal:val.grandTotal, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // NOTE: orderTypeId not needed, implied by customer and vendor parties; originFacilityId not needed, has facilityId on OrderPart
+            // NOTE: not mapping visitId, productStoreId, billingAccountId, syncStatusId (though could be at some point)
+        }})
+        conf.addTransformer("OrderItemShipGroup", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.order.OrderPart", [orderId:val.orderId,
+                    orderPartSeqId:((String) val.shipGroupSeqId).padLeft(5, '0'),
+                    shipmentMethodEnumId:map('shipmentMethodTypeId', (String) val.shipmentMethodTypeId),
+                    vendorPartyId:val.vendorPartyId/*usually null, expected from OrderRole*/, carrierPartyId:val.carrierPartyId,
+                    facilityId:val.facilityId, postalContactMechId:val.contactMechId, telecomContactMechId:val.telecomContactMechId,
+                    trackingNumber:val.trackingNumber, shippingInstructions:val.shippingInstructions, maySplit:val.maySplit,
+                    giftMessage:val.giftMessage, isGift:val.isGift, shipAfterDate:val.shipAfterDate, shipBeforeDate:val.shipByDate,
+                    estimatedShipDate:val.estimatedShipDate, estimatedDeliveryDate:val.estimatedDeliveryDate,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("OrderRole", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // must be after OrderHeader and OrderItemShipGroup
+            if ("_NA_".equals(val.roleTypeId)) { et.loadCurrent(false); return }
+            // BILL_TO_CUSTOMER, END_USER_CUSTOMER, PLACING_CUSTOMER, SHIP_TO_CUSTOMER; BILL_FROM_VENDOR, SHIP_FROM_VENDOR, SUPPLIER_AGENT
+            // EntityList orderPartList = Moqui.executionContext.entity.find("mantle.order.OrderPart").condition("orderId", val.orderId).list()
+            // for (EntityValue orderPart in orderPartList) {
+                // String orderPartSeqId = orderPart.orderPartSeqId
+                String orderPartSeqId = "00001" // optimized for only single part orders
+                if ("BILL_TO_CUSTOMER".equals(val.roleTypeId)) {
+                    et.addEntry(new SimpleEntry("mantle.order.OrderPart", [orderId:val.orderId, orderPartSeqId:orderPartSeqId, customerPartyId:val.partyId]))
+                } else if ("BILL_FROM_VENDOR".equals(val.roleTypeId)) {
+                    et.addEntry(new SimpleEntry("mantle.order.OrderPart", [orderId:val.orderId, orderPartSeqId:orderPartSeqId, vendorPartyId:val.partyId]))
+                }
+                et.addEntry(new SimpleEntry("mantle.order.OrderPartParty", [orderId:val.orderId, orderPartSeqId:orderPartSeqId,
+                        partyId:val.partyId, roleTypeId:map('roleTypeId', (String) val.roleTypeId),
+                        lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // }
+        }})
+        conf.addTransformer("OrderContactMech", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // must be after OrderHeader and OrderItemShipGroup
+            // EntityList orderPartList = Moqui.executionContext.entity.find("mantle.order.OrderPart").condition("orderId", val.orderId).list()
+            // for (EntityValue orderPart in orderPartList) {
+                // String orderPartSeqId = orderPart.orderPartSeqId
+                String orderPartSeqId = "00001" // optimized for only single part orders
+                et.addEntry(new SimpleEntry("mantle.order.OrderPartContactMech", [orderId:val.orderId, orderPartSeqId:orderPartSeqId,
+                        contactMechPurposeId:map('contactMechPurposeTypeId', (String) val.contactMechPurposeTypeId),
+                        contactMechId:val.contactMechId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // }
+        }})
+        conf.addTransformer("OrderItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // must be after OrderHeader and OrderItemShipGroup
+            String orderPartSeqId = "00001" // optimized for only single part orders
+            et.addEntry(new SimpleEntry("mantle.order.OrderItem", [orderId:val.orderId, orderPartSeqId:orderPartSeqId,
+                    orderItemSeqId:val.orderItemSeqId, productId:val.productId, otherPartyProductId:val.supplierProductId,
+                    itemTypeEnumId:map('orderItemTypeId', (String) val.orderItemTypeId),
+                    productFeatureId:val.productFeatureId, productCategoryId:val.productCategoryId, comments:val.comments,
+                    itemDescription:val.itemDescription, quantity:val.quantity, quantityCancelled:val.cancelQuantity,
+                    selectedAmount:val.selectedAmount, requiredByDate:val.shipBeforeDate,
+                    unitAmount:val.unitPrice, unitListPrice:val.unitListPrice, isModifiedPrice:val.isModifiedPrice,
+                    externalItemSeqId:val.externalId, fromAssetId:val.fromInventoryItemId, isPromo:val.isPromo,
+                    subscriptionId:val.subscriptionId, salesOpportunityId:val.salesOpportunityId,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // TODO: overrideGlAccountId when glAccount mapping done
+        }})
+        // NOTE: nothing for OrderItemShipGroupAssoc, doing single part orders only
+        conf.addTransformer("OrderAdjustment", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // must be after OrderHeader and OrderItemShipGroup
+            String orderPartSeqId = "00001" // optimized for only single part orders
+            et.addEntry(new SimpleEntry("mantle.order.OrderItem", [orderId:val.orderId, orderPartSeqId:orderPartSeqId,
+                    orderItemSeqId:val.orderAdjustmentId, itemTypeEnumId:map('orderAdjustmentTypeId', (String) val.orderAdjustmentTypeId),
+                    parentItemSeqId:(val.orderItemSeqId ?: val.originalAdjustmentId), comments:val.comments, itemDescription:val.description,
+                    unitAmount:val.amount, amountAlreadyIncluded:val.amountAlreadyIncluded, productFeatureId:val.productFeatureId,
+                    sourceReferenceId:val.sourceReferenceId, sourcePercentage:val.sourcePercentage,
+                    customerReferenceId:val.customerReferenceId, exemptAmount:val.exemptAmount,
+                    isPromo:(val.orderAdjustmentTypeId == 'PROMOTION_ADJUSTMENT' ? 'Y' : 'N'), isModifiedPrice:val.isManual,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // TODO: overrideGlAccountId when glAccount mapping done
+            // NOTE: doesn't map to TaxAuthority.taxAuthorityId, could look up by taxAuthGeoId, taxAuthPartyId
+        }})
+        conf.addTransformer("OrderPaymentPreference", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // must be after OrderHeader and OrderItemShipGroup, and for from/to parties after OrderRole
+            String orderPartSeqId = "00001" // optimized for only single part orders
+            EntityValue orderPart = Moqui.executionContext.entity.find("mantle.order.OrderPart").condition("orderId", val.orderId)
+                    .condition("orderPartSeqId", orderPartSeqId).one()
+            et.addEntry(new SimpleEntry("mantle.account.payment.Payment", [paymentId:'OPP' + ((String) val.orderPaymentPreferenceId),
+                    paymentTypeEnumId:'PtInvoicePayment', orderId:val.orderId, orderPartSeqId:orderPartSeqId,
+                    fromPartyId:orderPart?.customerPartyId, toPartyId:orderPart?.vendorPartyId,
+                    paymentInstrumentEnumId:map('paymentInstrumentEnumId', (String) val.paymentMethodTypeId),
+                    paymentMethodId:val.paymentMethodId, finAccountId:val.finAccountId, presentFlag:val.presentFlag,
+                    swipedFlag:val.swipedFlag, amount:val.maxAmount, processAttempt:val.processAttempt, needsNsfRetry:val.needsNsfRetry,
+                    paymentAuthCode:val.manualAuthCode, paymentRefNum:val.manualRefNum,
+                    statusId:map('paymentStatusId', (String) val.statusId), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
 
-      <field name="orderId" type="id-ne"></field>
-      <field name="orderTypeId" type="id"></field>
-      <field name="orderName" type="name"></field>
-      <field name="externalId" type="id"></field>
-      <field name="salesChannelEnumId" type="id"></field>
-      <field name="orderDate" type="date-time"></field>
-      <field name="priority" type="indicator"><description>Sets priority for Inventory Reservation</description></field>
-      <field name="entryDate" type="date-time"></field>
-      <field name="pickSheetPrintedDate" type="date-time"><description>This will be set to a date when pick sheet of the order is printed</description></field>
-      <field name="visitId" type="id"></field>
-      <field name="statusId" type="id"></field>
-      <field name="createdBy" type="id-vlong"></field>
-      <field name="firstAttemptOrderId" type="id"></field>
-      <field name="currencyUom" type="id"></field>
-      <field name="syncStatusId" type="id"></field>
-      <field name="billingAccountId" type="id"></field>
-      <field name="originFacilityId" type="id"></field>
-      <field name="webSiteId" type="id"></field>
-      <field name="productStoreId" type="id"></field>
-      <field name="terminalId" type="id-long"></field>
-      <field name="transactionId" type="id-long"></field>
-      <field name="autoOrderShoppingListId" type="id"></field>
-      <field name="needsInventoryIssuance" type="indicator"></field>
-      <field name="isRushOrder" type="indicator"></field>
-      <field name="internalCode" type="id-long"></field>
-      <field name="remainingSubTotal" type="currency-amount"></field>
-      <field name="grandTotal" type="currency-amount"></field>
-      <field name="isViewed" type="indicator"></field>
-      <field name="invoicePerShipment" type="indicator"></field>
+/*
 
  */
 
@@ -262,7 +332,7 @@ OrderHeader
         /* ========== PaymentMethod ========== */
 
         conf.addTransformer("PaymentMethod", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
-            String paymentMethodTypeEnumId = OFBizFieldMap.get('paymentMethodTypeId', (String) val.paymentMethodTypeId)
+            String paymentMethodTypeEnumId = OFBizFieldMap.get('paymentMethodTypeEnumId', (String) val.paymentMethodTypeId)
             if (!paymentMethodTypeEnumId) { logger.info("Skipping PaymentMethod ${val.paymentMethodId} of type ${val.paymentMethodTypeId}"); et.loadCurrent(false); return }
             et.addEntry(new SimpleEntry("mantle.account.method.PaymentMethod", [paymentMethodId:val.paymentMethodId,
                     paymentMethodTypeEnumId:paymentMethodTypeEnumId,

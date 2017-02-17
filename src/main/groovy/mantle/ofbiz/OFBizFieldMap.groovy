@@ -28,6 +28,7 @@ class OFBizFieldMap {
         return valueMap.get(value)
     }
     static LinkedHashMap<String, LinkedHashMap<String, String>> fieldValueMaps = [
+        // ContactMech
         contactMechPurposeTypeId:[BILLING_EMAIL:'EmailBilling', BILLING_LOCATION:'PostalBilling', FACEBOOK_URL:'WebUrlFacebook',
                 FAX_BILLING:'PhoneBillingFax', FAX_NUMBER:'PhoneFax', FAX_NUMBER_SEC:'PhoneFax', FAX_SHIPPING:'PhoneShippingFax',
                 GENERAL_LOCATION:'PostalPrimary', ICAL_URL:'WebUrlICal', LINKEDIN_URL:'WebUrlLinkedIn',
@@ -43,6 +44,20 @@ class OFBizFieldMap {
                 ELECTRONIC_ADDRESS:'CmtElectronicAddress', EMAIL_ADDRESS:'CmtEmailAddress', IP_ADDRESS:'CmtIpAddress',
                 DOMAIN_NAME:'CmtDomainName', WEB_ADDRESS:'CmtWebAddress'],
 
+        // Order
+        salesChannelEnumId:[EMAIL_SALES_CHANNEL:'ScEmail', PHONE_SALES_CHANNEL:'ScPhone', UNKNWN_SALES_CHANNEL:'ScUnknown', WEB_SALES_CHANNEL:'ScWeb'],
+        orderStatusId:[ORDER_APPROVED:'OrderApproved', ORDER_CANCELLED:'OrderCancelled', ORDER_COMPLETED:'OrderCompleted',
+                ORDER_CREATED:'OrderOpen', ORDER_HOLD:'OrderHold', ORDER_PROCESSING:'OrderProcessing',
+                ORDER_REJECTED:'OrderRejected', ORDER_SENT:'OrderSent'],
+        shipmentMethodTypeId:[AIR:'ShMthNextDay', GROUND:'ShMthGround', NO_SHIPPING:null, STANDARD:'ShMthGround', 'USPS-CAN':'ShMthGround', 'USPS Free':'ShMthGround'],
+        orderItemTypeId:[ASSET_ORDER_ITEM:'ItemAsset', BULK_ORDER_ITEM:'ItemInventory', INVENTORY_ORDER_ITEM:'ItemInventory',
+                PRODUCT_ORDER_ITEM:'ItemProduct', PURCHASE_SPECIFIC:'ItemInventory', RENTAL_ORDER_ITEM:'ItemRental',
+                SUPPLIES_ORDER_ITEM:'ItemExpOfficeSup', WORK_ORDER_ITEM:'ItemWorkEffort'],
+        orderAdjustmentTypeId:[ADDITIONAL_FEATURE:'ItemAddtlFeature', DISCOUNT_ADJUSTMENT:'ItemDiscount', FEE:'ItemFee',
+                MISCELLANEOUS_CHARGE:'ItemMiscCharge', PROMOTION_ADJUSTMENT:'ItemDiscount', REPLACE_ADJUSTMENT:'ItemReplacement',
+                SALES_TAX:'ItemSalesTax', SHIPPING_CHARGES:'ItemShipping'],
+
+        // Party
         partyTypeId:[PERSON:'PtyPerson', PARTY_GROUP:'PtyOrganization'],
         roleTypeId:['_NA_':null, ACCOUNT:'Account', ACCOUNT_LEAD:'AccountLead', LEAD:'AccountLead', AGENT:'Agent',
                 AFFILIATE:'Affiliate', CARRIER:'Carrier', COMPETITOR:'Competitor', CONSUMER:'Consumer', CONTRACTOR:'Contractor',
@@ -66,11 +81,25 @@ class OFBizFieldMap {
                 LEAD_OWNER:'PrtCustomer', MANAGER:'PrtManager', SALES_AFFILIATE:'PrtSalesAffiliate', SALES_REP:'PrtRepresentative',
                 SPOUSE:'PrtSpouse', SUPPLIER_REL:'PrtSupplier'],
 
-        paymentMethodTypeId:[CERTIFIED_CHECK:'PmtBankAccount', COMPANY_CHECK:'PmtBankAccount', EFT_ACCOUNT:'PmtBankAccount',
+        // Payment
+        // paymentInstrumentEnumId and paymentMethodTypeEnumId are based on paymentMethodTypeId
+        paymentInstrumentEnumId:[CASH:'PiCash', CERTIFIED_CHECK:'PiCertifiedCheck', COMPANY_ACCOUNT:'PiCompanyAccount',
+                COMPANY_CHECK:'PiCompanyCheck', CREDIT_CARD:'PiCreditCard', EFT_ACCOUNT:'PiAch', EXT_BILLACT:'PiBillingAccount',
+                EXT_COD:'PiCod', EXT_OFFLINE:'PiCash', FIN_ACCOUNT:'PiFinancialAccount', GIFT_CARD:'PiGiftCard',
+                GIFT_CERTIFICATE:'PiGiftCerificate', MONEY_ORDER:'PiMoneyOrder', PERSONAL_CHECK:'PiPersonalCheck', PETTY_CASH:'PiCash'],
+            // ADJUSTMENT, EXT_AMAZON, EXT_AUTHORIZE_NET, EXT_EBAY, EXT_IDEAL, EXT_PAYPAL, EXT_WORLDPAY,
+        paymentMethodTypeEnumId:[CERTIFIED_CHECK:'PmtBankAccount', COMPANY_CHECK:'PmtBankAccount', EFT_ACCOUNT:'PmtBankAccount',
                 CREDIT_CARD:'PmtCreditCard', FIN_ACCOUNT:'PmtFinancialAccount', GIFT_CARD:'PmtGiftCard', PERSONAL_CHECK:'PmtBankAccount'],
             // ADJUSTMENT,CASH,COMPANY_ACCOUNT,EXT_AMAZON,EXT_AUTHORIZE_NET,EXT_BILLACT,EXT_COD,EXT_EBAY,EXT_IDEAL,EXT_OFFLINE,EXT_PAYPAL,EXT_WORLDPAY,GIFT_CERTIFICATE,MONEY_ORDER,PETTY_CASH
         cardType:[AmericanExpress:'CctAmericanExpress', Discover:'CctDiscover', MasterCard:'CctMastercard', Visa:'CctVisa'],
+        paymentStatusId:[PAYMENT_AUTHORIZED:'PmntAuthorized', PAYMENT_CANCELLED:'PmntCancelled', PAYMENT_DECLINED:'PmntDeclined',
+                PAYMENT_NOT_AUTH:'PmntPromised', PAYMENT_NOT_RECEIVED:'PmntPromised', PAYMENT_RECEIVED:'PmntDelivered',
+                PAYMENT_REFUNDED:'PmntRefunded', PAYMENT_SETTLED:'PmntDelivered',
+                PMNT_CANCELLED:'PmntCancelled', PMNT_CONFIRMED:'PmntConfirmed', PMNT_NOT_PAID:'PmntPromised',
+                PMNT_RECEIVED:'PmntDelivered', PMNT_SENT:'PmntDelivered', PMNT_VOID:'PmntVoid'],
 
+
+        // Product
         // productTypeEnumId, assetTypeEnumId, and assetClassEnumId based on Product.productTypeId
         productTypeEnumId:[ASSET_USAGE:'PtAssetUse', ASSET_USAGE_OUT_IN:'PtAssetUse', DIGITAL_GOOD:'PtDigital',
                 FINDIG_GOOD:'PtDigitalAsset', FINISHED_GOOD:'PtAsset', GOOD:'PtAsset', RAW_MATERIAL:'PtAsset', SERVICE:'PtService',
@@ -81,6 +110,7 @@ class OFBizFieldMap {
                 RAW_MATERIAL:'AsClsInventoryRaw', SERVICE_PRODUCT:'AsClsInventoryFin', SUBASSEMBLY:'AsClsInventorySub', WIP:'AsClsInventorySub'],
         productPriceTypeId:[DEFAULT_PRICE:'PptCurrent', LIST_PRICE:'PptList'],
 
+        // Inventory
         inventoryStatusId:[INV_ACTIVATED:'AstActivated', INV_AVAILABLE:'AstAvailable', INV_BEING_TRANSFERED:'AstInTransfer',
                 INV_BEING_TRANS_PRM:'AstInTransferPromise', INV_DEACTIVATED:'AstDeactivated', INV_DEFECTIVE:'AstDefective',
                 INV_DELIVERED:'AstDelivered', INV_NS_DEFECTIVE:'AstDefective', INV_NS_ON_HOLD:'AstOnHold', INV_NS_RETURNED:'AstReturned'],
@@ -93,5 +123,8 @@ class OFBizFieldMap {
 
 /*
 
+RETURN_ACCEPTED:'', RETURN_CANCELLED:'', RETURN_COMPLETED:'', RETURN_MAN_REFUND:'', RETURN_RECEIVED:'', RETURN_REQUESTED:'',
+
+SUP_RETURN_ACCEPTED:'', SUP_RETURN_CANCELLED:'', SUP_RETURN_COMPLETED:'', SUP_RETURN_REQUESTED:'', SUP_RETURN_SHIPPED:'',
 
  */

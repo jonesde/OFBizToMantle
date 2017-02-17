@@ -28,11 +28,6 @@ import static mantle.ofbiz.OFBizFieldMap.map
 class OFBizTransform {
     static Logger logger = LoggerFactory.getLogger(OFBizTransform.class)
 
-    static List<String> loadOrder = ['Party', 'Person', 'PartyGroup', 'PartyRole', 'PartyClassification', 'PartyRelationship', 'UserLogin',
-            'ContactMech', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
-            'PaymentMethod', 'CreditCard',
-            'Product', 'ProductPrice', 'Lot', 'InventoryItem', 'PhysicalInventory'
-            /* 'OrderItemShipGrpInvRes', 'ItemIssuance', 'ShipmentReceipt', 'InventoryItemDetail' */]
     static List<List<String>> loadOrderParallel = [
             ['Party', 'ContactMech', 'Product', 'Lot'],
             ['Person', 'PartyGroup', 'PartyRole', 'UserLogin', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',

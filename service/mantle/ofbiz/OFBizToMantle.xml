@@ -32,6 +32,8 @@ along with this software (see the LICENSE.md file). If not, see
             import org.slf4j.Logger
             import org.slf4j.LoggerFactory
 
+            boolean runParallel = false
+
             Logger logger = LoggerFactory.getLogger('OFBizToMantle.importOFBizData')
             ExecutionContext ec = context.ec
             ResourceReference dirRef = ec.resource.getLocationReference(directoryLocation)
@@ -46,9 +48,11 @@ along with this software (see the LICENSE.md file). If not, see
                         logger.warn("File for entity ${entityName} not found at: ${fileRef.getLocation()}")
                         continue
                     }
-                    threadList.add(startEtl(entityName, fileRef, etlInfo))
+                    Thread curThread = startEtl(entityName, fileRef, etlInfo)
+                    threadList.add(curThread)
+                    if (!runParallel) curThread.join()
                 }
-                for (Thread thread in threadList) thread.join()
+                if (runParallel) for (Thread thread in threadList) thread.join()
 
                 logger.info("=== ETL Finished parallel set ${nameList}")
                 if (etlInfo.stopAll) break

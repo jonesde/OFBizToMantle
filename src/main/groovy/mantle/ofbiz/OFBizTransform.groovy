@@ -31,7 +31,8 @@ class OFBizTransform {
     static List<String> loadOrder = ['Party', 'Person', 'PartyGroup', 'PartyRole', 'PartyClassification', 'PartyRelationship', 'UserLogin',
             'ContactMech', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
             'PaymentMethod', 'CreditCard',
-            'Product', 'ProductPrice', 'Lot', 'InventoryItem', 'PhysicalInventory' /* 'OrderItemShipGrpInvRes', 'ItemIssuance', 'ShipmentReceipt', 'InventoryItemDetail' */]
+            'Product', 'ProductPrice', 'Lot', 'InventoryItem', 'PhysicalInventory'
+            /* 'OrderItemShipGrpInvRes', 'ItemIssuance', 'ShipmentReceipt', 'InventoryItemDetail' */]
     static List<List<String>> loadOrderParallel = [
             ['Party', 'ContactMech', 'Product', 'Lot'],
             ['Person', 'PartyGroup', 'PartyRole', 'UserLogin', 'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
@@ -154,6 +155,43 @@ class OFBizTransform {
                     quantityAccepted:val.quantityAccepted, quantityRejected:val.quantityRejected,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
+
+        /* ========== Order ========== */
+
+/*
+OrderHeader
+
+      <field name="orderId" type="id-ne"></field>
+      <field name="orderTypeId" type="id"></field>
+      <field name="orderName" type="name"></field>
+      <field name="externalId" type="id"></field>
+      <field name="salesChannelEnumId" type="id"></field>
+      <field name="orderDate" type="date-time"></field>
+      <field name="priority" type="indicator"><description>Sets priority for Inventory Reservation</description></field>
+      <field name="entryDate" type="date-time"></field>
+      <field name="pickSheetPrintedDate" type="date-time"><description>This will be set to a date when pick sheet of the order is printed</description></field>
+      <field name="visitId" type="id"></field>
+      <field name="statusId" type="id"></field>
+      <field name="createdBy" type="id-vlong"></field>
+      <field name="firstAttemptOrderId" type="id"></field>
+      <field name="currencyUom" type="id"></field>
+      <field name="syncStatusId" type="id"></field>
+      <field name="billingAccountId" type="id"></field>
+      <field name="originFacilityId" type="id"></field>
+      <field name="webSiteId" type="id"></field>
+      <field name="productStoreId" type="id"></field>
+      <field name="terminalId" type="id-long"></field>
+      <field name="transactionId" type="id-long"></field>
+      <field name="autoOrderShoppingListId" type="id"></field>
+      <field name="needsInventoryIssuance" type="indicator"></field>
+      <field name="isRushOrder" type="indicator"></field>
+      <field name="internalCode" type="id-long"></field>
+      <field name="remainingSubTotal" type="currency-amount"></field>
+      <field name="grandTotal" type="currency-amount"></field>
+      <field name="isViewed" type="indicator"></field>
+      <field name="invoicePerShipment" type="indicator"></field>
+
+ */
 
         /* ========== Party ========== */
 

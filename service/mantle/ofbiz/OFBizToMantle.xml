@@ -21,7 +21,11 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <actions><script><![CDATA[
             import mantle.ofbiz.OFBizTransform
+            import org.moqui.Moqui
             import org.moqui.context.ExecutionContext
+            import org.moqui.impl.context.ArtifactExecutionFacadeImpl
+            import org.moqui.impl.context.ExecutionContextFactoryImpl
+            import org.moqui.impl.context.ExecutionContextImpl
             import org.moqui.etl.FlatXmlExtractor
             import org.moqui.etl.SimpleEtl
             import org.moqui.resource.ResourceReference
@@ -31,33 +35,58 @@ along with this software (see the LICENSE.md file). If not, see
             Logger logger = LoggerFactory.getLogger('OFBizToMantle.importOFBizData')
             ExecutionContext ec = context.ec
             ResourceReference dirRef = ec.resource.getLocationReference(directoryLocation)
-            int extractCount = 0, skipCount = 0, loadCount = 0, entityCount = 0
             long startTime = System.currentTimeMillis()
+            EtlInfo etlInfo = new EtlInfo()
 
-            // disable EECA rules
-            ec.artifactExecution.disableEntityEca()
-
-            for (String entityName in OFBizTransform.loadOrder) {
-                ResourceReference fileRef = dirRef.getChild(entityName + '.xml')
-                if (!fileRef.exists) {
-                    logger.warn("File for entity ${entityName} not found at: ${fileRef.getLocation()}")
-                    continue
+            for (List<String> nameList in OFBizTransform.loadOrderParallel) {
+                List<Thread> threadList = []
+                for (String entityName in nameList) {
+                    ResourceReference fileRef = dirRef.getChild(entityName + '.xml')
+                    if (!fileRef.exists) {
+                        logger.warn("File for entity ${entityName} not found at: ${fileRef.getLocation()}")
+                        continue
+                    }
+                    threadList.add(startEtl(entityName, fileRef, etlInfo))
                 }
+                for (Thread thread in threadList) thread.join()
 
+                logger.info("=== ETL Finished parallel set ${nameList}")
+                if (etlInfo.stopAll) break
+            }
+
+            logger.info("=== ETL Finished Load of ${etlInfo.entityCount} entities in ${(System.currentTimeMillis() - startTime) / 1000}s (extracted: ${etlInfo.extractCount}, skipped: ${etlInfo.skipCount}, loaded: ${etlInfo.loadCount})")
+
+
+            class EtlInfo {
+                int extractCount = 0, skipCount = 0, loadCount = 0, entityCount = 0
+                boolean stopAll = false
+            }
+
+            Thread startEtl(String entityName, ResourceReference fileRef, EtlInfo etlInfo) {
                 SimpleEtl.Extractor extractor = new FlatXmlExtractor(fileRef)
                 SimpleEtl.Loader loader = ec.entity.makeEtlLoader().useTryInsert().dummyFks()
                 SimpleEtl etl = new SimpleEtl(extractor, loader).setConfiguration(OFBizTransform.conf)
-                etl.process()
-                if (etl.hasError()) {
-                    logger.error("Error loading ${entityName}", etl.singleErrorCause)
-                    break
-                } else {
-                    logger.info("Loaded ${entityName} in ${etl.runTime}ms (extracted: ${etl.extractCount}, skipped: ${etl.skipCount}, loaded: ${etl.loadCount})")
-                    extractCount += etl.extractCount; skipCount += etl.skipCount; loadCount += etl.loadCount
-                    entityCount++
-                }
+
+                ExecutionContextImpl.ThreadPoolRunnable runnable = new ExecutionContextImpl.ThreadPoolRunnable((ExecutionContextFactoryImpl) ec.factory, {
+                    ArtifactExecutionFacadeImpl ae = (ArtifactExecutionFacadeImpl) Moqui.executionContext.getArtifactExecution()
+                    ae.disableAuthz(); ae.disableEntityEca(); ae.disableEntityDataFeed()
+
+                    etl.process()
+                    if (etl.hasError()) {
+                        logger.error("Error loading ${entityName}", etl.singleErrorCause)
+                        etlInfo.stopAll = true
+                    } else {
+                        logger.info("Loaded ${entityName} in ${etl.runTime}ms (extracted: ${etl.extractCount}, skipped: ${etl.skipCount}, loaded: ${etl.loadCount})")
+                        etlInfo.extractCount += etl.extractCount; etlInfo.skipCount += etl.skipCount;
+                        etlInfo.loadCount += etl.loadCount
+                        etlInfo.entityCount++
+                    }
+                })
+
+                Thread thread = new Thread(runnable)
+                thread.start()
+                return thread
             }
-            logger.info("Finished Load of ${entityCount} entities in ${(System.currentTimeMillis() - startTime)/1000}s (extracted: ${extractCount}, skipped: ${skipCount}, loaded: ${loadCount})")
             ]]></script></actions>
     </service>
 </services>

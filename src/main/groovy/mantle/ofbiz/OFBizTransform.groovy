@@ -41,7 +41,7 @@ class OFBizTransform {
                     'OrderRole', 'OrderContactMech', 'OrderItem',
                     'ShipmentItem', 'ShipmentPackage', 'ShipmentRouteSegment'],
             ['OrderAdjustment', 'OrderPaymentPreference', 'OrderItemShipGrpInvRes',
-                    'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg'],
+                    'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg', 'OrderShipment'],
             ['InventoryItemDetail']
     ]
 
@@ -460,6 +460,13 @@ class OFBizTransform {
                     packageTransportAmount:val.packageTransportCost, packageServiceAmount:val.packageServiceCost,
                     packageOtherAmount:val.packageOtherCost, codAmount:val.codAmount, insuredAmount:val.insuredAmount,
                     amountUomId:val.currencyUomId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("OrderShipment", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            Map<String, Object> siMappingCache = getMappingCache("ShipmentItemProduct")
+            String productId = siMappingCache.get(((String) val.shipmentId) + ':' + ((String) val.shipmentItemSeqId))
+            et.addEntry(new SimpleEntry("mantle.shipment.ShipmentItemSource", [shipmentItemSourceId:UUID.randomUUID().toString(),
+                    shipmentId:val.shipmentId, productId:productId, quantity:val.quantity, orderId:val.orderId,
+                    orderItemSeqId:val.orderItemSeqId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
 
         /* =========== Custom Transformer Examples =========== */

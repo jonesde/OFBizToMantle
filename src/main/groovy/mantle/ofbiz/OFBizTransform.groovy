@@ -33,7 +33,8 @@ class OFBizTransform {
     static List<List<String>> loadOrderParallel = [
             ['Party', 'ContactMech', 'Product', 'Lot', 'OrderHeader'],
             ['Person', 'PartyGroup', 'PartyRole', 'UserLogin',
-                    'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber', 'PaymentMethod',
+                    'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
+                    'PaymentMethod',
                     'ProductPrice', 'InventoryItem', 'PhysicalInventory',
                     'OrderItemShipGroup',
                     'Shipment', 'ShipmentBoxType',
@@ -41,9 +42,11 @@ class OFBizTransform {
             ['PartyClassification', 'PartyRelationship', 'CreditCard',
                     'OrderRole', 'OrderContactMech', 'OrderItem',
                     'ShipmentItem', 'ShipmentPackage', 'ShipmentRouteSegment',
-                    'InvoiceContactMech', 'InvoiceRole', 'InvoiceItem'],
+                    'InvoiceContactMech', 'InvoiceRole', 'InvoiceItem',
+                    'Payment'],
             ['OrderAdjustment', 'OrderPaymentPreference', 'OrderItemShipGrpInvRes',
-                    'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg', 'OrderShipment'],
+                    'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg', 'OrderShipment',
+                    'PaymentApplication'],
             ['InventoryItemDetail']
     ]
 
@@ -370,6 +373,28 @@ class OFBizTransform {
                 currencyUomId:val.lastCurrencyUom, locale:val.lastLocale, timeZone:val.lastTimeZone,
                 currentPassword:currentPassword, passwordHashType:passwordHashType, passwordSetDate:((String) val.lastUpdatedTxStamp).take(23),
                 lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+
+        /* ========== Payment ========== */
+
+        conf.addTransformer("Payment", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.account.payment.Payment", [paymentId:val.paymentId,
+                    paymentTypeEnumId:map('paymentTypeId', (String) val.paymentTypeId), fromPartyId:val.partyIdFrom, toPartyId:val.partyIdTo,
+                    paymentInstrumentEnumId:map('paymentInstrumentEnumId', (String) val.paymentMethodTypeId),
+                    paymentMethodId:val.paymentMethodId, statusId:map('paymentStatusId', (String) val.statusId),
+                    effectiveDate:val.effectiveDate, amount:val.amount, amountUomId:val.currencyUomId,
+                    paymentRefNum:val.paymentRefNum, comments:val.comments, finAccountTransId:val.finAccountTransId,
+                    /*overrideGlAccountId:val.overrideGlAccountId,*/ originalCurrencyAmount:val.actualCurrencyAmount,
+                    originalCurrencyUomId:val.actualCurrencyUomId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // TODO: anything with paymentGatewayResponseId, paymentPreferenceId
+            // TODO: skipping overrideGlAccountId for now, needs GlAccount mapping
+        }})
+        conf.addTransformer("PaymentApplication", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.account.payment.PaymentApplication", [paymentApplicationId:val.paymentApplicationId,
+                    paymentId:val.paymentId, invoiceId:val.invoiceId, invoiceItemSeqId:val.invoiceItemSeqId,
+                    billingAccountId:val.billingAccountId, toPaymentId:val.toPaymentId, taxAuthGeoId:val.taxAuthGeoId,
+                    amountApplied:val.amountApplied, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // TODO: skipping overrideGlAccountId for now, needs GlAccount mapping
         }})
 
         /* ========== PaymentMethod ========== */

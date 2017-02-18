@@ -104,6 +104,10 @@ class OFBizFieldMap {
                 SPOUSE:'PrtSpouse', SUPPLIER_REL:'PrtSupplier'],
 
         // Payment
+        paymentTypeId:[COMMISSION_PAYMENT:'PtInvoicePayment', CUSTOMER_DEPOSIT:'PtPrePayment', CUSTOMER_PAYMENT:'PtInvoicePayment',
+                CUSTOMER_REFUND:'PtRefund', DISBURSEMENT:'PtDisbursement', SALES_TAX_PAYMENT:'PtInvoicePayment',
+                TAX_PAYMENT:'PtInvoicePayment', VENDOR_PAYMENT:'PtInvoicePayment', VENDOR_PREPAY:'PtPrePayment'],
+                // ADJUSTMENT, GC_DEPOSIT, GC_WITHDRAWAL, INCOME_TAX_PAYMENT, INTEREST_RECEIPT, PAY_CHECK, PAYROLL_TAX_PAYMENT, PAYROL_PAYMENT, POS_PAID_IN, POS_PAID_OUT, RECEIPT, SALES_TAX_PAYMENT, TAX_PAYMENT, VENDOR_PAYMENT, VENDOR_PREPAY
         // paymentInstrumentEnumId and paymentMethodTypeEnumId are based on paymentMethodTypeId
         paymentInstrumentEnumId:[CASH:'PiCash', CERTIFIED_CHECK:'PiCertifiedCheck', COMPANY_ACCOUNT:'PiCompanyAccount',
                 COMPANY_CHECK:'PiCompanyCheck', CREDIT_CARD:'PiCreditCard', EFT_ACCOUNT:'PiAch', EXT_BILLACT:'PiBillingAccount',
@@ -155,6 +159,7 @@ class OFBizFieldMap {
 }
 
 /*
+
 
 
 

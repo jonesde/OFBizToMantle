@@ -44,6 +44,28 @@ class OFBizFieldMap {
                 ELECTRONIC_ADDRESS:'CmtElectronicAddress', EMAIL_ADDRESS:'CmtEmailAddress', IP_ADDRESS:'CmtIpAddress',
                 DOMAIN_NAME:'CmtDomainName', WEB_ADDRESS:'CmtWebAddress'],
 
+        // Invoice
+        invoiceTypeId:[COMMISSION_INVOICE:'InvoiceCommission', CUST_RTN_INVOICE:'InvoiceReturn', PAYROL_INVOICE:'InvoicePayroll',
+                PURCHASE_INVOICE:'InvoiceSales', PURC_RTN_INVOICE:'InvoiceReturn', PUR_INV_TEMPLATE:'InvoiceTemplate',
+                SALES_INVOICE:'InvoiceSales', SALES_INV_TEMPLATE:'InvoiceTemplate', TEMPLATE:'InvoiceTemplate'],
+                // INTEREST_INVOICE, VENDOR_CREDIT_MEMO
+        invoiceIncomingStatusId:[INVOICE_IN_PROCESS:'InvoiceIncoming', INVOICE_APPROVED:'InvoiceApproved', INVOICE_SENT:'InvoiceIncoming',
+                INVOICE_RECEIVED:'InvoiceReceived', INVOICE_READY:'InvoiceReceived', INVOICE_PAID:'InvoicePmtSent',
+                INVOICE_WRITEOFF:'InvoiceWriteOff', INVOICE_CANCELLED:'InvoiceCancelled'],
+        invoiceOutgoingStatusId:[INVOICE_IN_PROCESS:'InvoiceInProcess', INVOICE_APPROVED:'InvoiceFinalized', INVOICE_SENT:'InvoiceSent',
+                INVOICE_RECEIVED:'InvoiceSent', INVOICE_READY:'InvoiceFinalized', INVOICE_PAID:'InvoicePmtRecvd',
+                INVOICE_WRITEOFF:'InvoiceWriteOff', INVOICE_CANCELLED:'InvoiceCancelled'],
+        invoiceItemTypeId:[CRT_FPROD_ITEM:'ItemProduct', CRT_SHIPPING_ADJ:'ItemShipping', INV_FPROD_ITEM:'ItemProduct',
+                INVOICE_ITM_ADJ:'ItemInvAdjust', INVOICE_SM_DISCR:'ItemInvAdjust', INV_PROD_ITEM:'ItemProduct',
+                ITM_ADD_FEATURE:'ItemAddtlFeature', ITM_CHARGEBACK_ADJ:'ItemChargebackAdjust', ITM_COMPLIANCE_ADJ:'ItemComplianceFee',
+                ITM_DISCOUNT_ADJ:'ItemDiscount', ITM_FEE:'ItemFee', ITM_MISC_CHARGE:'ItemMiscCharge', ITM_PROMOTION_ADJ:'ItemDiscount',
+                ITM_REPLACE_ADJ:'ItemReplacement', ITM_SALES_TAX:'ItemSalesTax', ITM_SHIPPING_CHARGES:'ItemShipping',
+                ITM_SHRINKAGE_ADJ:'ItemShrinkage', P_FEE:'ItemFee', PINV_DISCOUNT_ADJ:'ItemDiscount',
+                PINV_FPROD_ITEM:'ItemInventory', PINV_MISC_CHARGE:'ItemFee', PINVOICE_ADJ:'ItemInvAdjust',
+                PINVOICE_CREDIT_MEMO:'ItemInvAdjust', PINV_PROD_ITEM:'ItemInventory', PINV_PROMOTION_ADJ:'ItemDiscount',
+                PITM_MISC_CHARGE:'ItemFee', SINVOICE_ITM_ADJ:'ItemInvAdjust'],
+                // NOTE this is not nearly of all the roughly 150 invoice item types
+
         // Order
         salesChannelEnumId:[EMAIL_SALES_CHANNEL:'ScEmail', PHONE_SALES_CHANNEL:'ScPhone', UNKNWN_SALES_CHANNEL:'ScUnknown', WEB_SALES_CHANNEL:'ScWeb'],
         orderStatusId:[ORDER_APPROVED:'OrderApproved', ORDER_CANCELLED:'OrderCancelled', ORDER_COMPLETED:'OrderCompleted',
@@ -87,10 +109,10 @@ class OFBizFieldMap {
                 COMPANY_CHECK:'PiCompanyCheck', CREDIT_CARD:'PiCreditCard', EFT_ACCOUNT:'PiAch', EXT_BILLACT:'PiBillingAccount',
                 EXT_COD:'PiCod', EXT_OFFLINE:'PiCash', FIN_ACCOUNT:'PiFinancialAccount', GIFT_CARD:'PiGiftCard',
                 GIFT_CERTIFICATE:'PiGiftCerificate', MONEY_ORDER:'PiMoneyOrder', PERSONAL_CHECK:'PiPersonalCheck', PETTY_CASH:'PiCash'],
-            // ADJUSTMENT, EXT_AMAZON, EXT_AUTHORIZE_NET, EXT_EBAY, EXT_IDEAL, EXT_PAYPAL, EXT_WORLDPAY,
+                // ADJUSTMENT, EXT_AMAZON, EXT_AUTHORIZE_NET, EXT_EBAY, EXT_IDEAL, EXT_PAYPAL, EXT_WORLDPAY,
         paymentMethodTypeEnumId:[CERTIFIED_CHECK:'PmtBankAccount', COMPANY_CHECK:'PmtBankAccount', EFT_ACCOUNT:'PmtBankAccount',
                 CREDIT_CARD:'PmtCreditCard', FIN_ACCOUNT:'PmtFinancialAccount', GIFT_CARD:'PmtGiftCard', PERSONAL_CHECK:'PmtBankAccount'],
-            // ADJUSTMENT,CASH,COMPANY_ACCOUNT,EXT_AMAZON,EXT_AUTHORIZE_NET,EXT_BILLACT,EXT_COD,EXT_EBAY,EXT_IDEAL,EXT_OFFLINE,EXT_PAYPAL,EXT_WORLDPAY,GIFT_CERTIFICATE,MONEY_ORDER,PETTY_CASH
+                // ADJUSTMENT,CASH,COMPANY_ACCOUNT,EXT_AMAZON,EXT_AUTHORIZE_NET,EXT_BILLACT,EXT_COD,EXT_EBAY,EXT_IDEAL,EXT_OFFLINE,EXT_PAYPAL,EXT_WORLDPAY,GIFT_CERTIFICATE,MONEY_ORDER,PETTY_CASH
         cardType:[AmericanExpress:'CctAmericanExpress', Discover:'CctDiscover', MasterCard:'CctMastercard', Visa:'CctVisa'],
         paymentStatusId:[PAYMENT_AUTHORIZED:'PmntAuthorized', PAYMENT_CANCELLED:'PmntCancelled', PAYMENT_DECLINED:'PmntDeclined',
                 PAYMENT_NOT_AUTH:'PmntPromised', PAYMENT_NOT_RECEIVED:'PmntPromised', PAYMENT_RECEIVED:'PmntDelivered',

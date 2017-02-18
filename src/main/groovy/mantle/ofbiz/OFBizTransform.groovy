@@ -36,10 +36,12 @@ class OFBizTransform {
                     'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber', 'PaymentMethod',
                     'ProductPrice', 'InventoryItem', 'PhysicalInventory',
                     'OrderItemShipGroup',
-                    'Shipment', 'ShipmentBoxType'],
+                    'Shipment', 'ShipmentBoxType',
+                    'Invoice'],
             ['PartyClassification', 'PartyRelationship', 'CreditCard',
                     'OrderRole', 'OrderContactMech', 'OrderItem',
-                    'ShipmentItem', 'ShipmentPackage', 'ShipmentRouteSegment'],
+                    'ShipmentItem', 'ShipmentPackage', 'ShipmentRouteSegment',
+                    'InvoiceContactMech', 'InvoiceRole', 'InvoiceItem'],
             ['OrderAdjustment', 'OrderPaymentPreference', 'OrderItemShipGrpInvRes',
                     'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg', 'OrderShipment'],
             ['InventoryItemDetail']
@@ -166,6 +168,40 @@ class OFBizTransform {
                     receivedByUserId:val.receivedByUserLoginId, receivedDate:val.datetimeReceived, itemDescription:val.itemDescription,
                     quantityAccepted:val.quantityAccepted, quantityRejected:val.quantityRejected,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+
+        /* ========== Invoice ========== */
+
+        conf.addTransformer("Invoice", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            String statusMapType = (((String) val.invoiceTypeId) in ['SALES_INVOICE', 'SALES_INV_TEMPLATE', 'PURC_RTN_INVOICE']) ?
+                    'invoiceOutgoingStatusId' : 'invoiceIncomingStatusId'
+            et.addEntry(new SimpleEntry("mantle.account.invoice.Invoice", [invoiceId:val.invoiceId,
+                    invoiceTypeEnumId:map('invoiceTypeId', (String) val.invoiceTypeId),
+                    statusId:map(statusMapType, (String) val.statusId),
+                    fromPartyId:val.partyIdFrom, toPartyId:val.partyId, billingAccountId:val.billingAccountId,
+                    invoiceDate:val.invoiceDate, dueDate:val.dueDate, paidDate:val.paidDate, invoiceMessage:val.invoiceMessage,
+                    referenceNumber:val.referenceNumber, description:val.description, currencyUomId:val.currencyUomId,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("InvoiceContactMech", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.account.invoice.InvoiceContactMech", [invoiceId:val.invoiceId,
+                    contactMechId:val.contactMechId, contactMechPurposeId:map('contactMechPurposeTypeId', (String) val.contactMechPurposeTypeId),
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("InvoiceRole", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            if ("_NA_".equals(val.roleTypeId)) { et.loadCurrent(false); return }
+            et.addEntry(new SimpleEntry("mantle.account.invoice.InvoiceParty", [invoiceId:val.invoiceId, partyId:val.partyId,
+                    roleTypeId:map('roleTypeId', (String) val.roleTypeId), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("InvoiceItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.account.invoice.InvoiceItem", [invoiceId:val.invoiceId,
+                    invoiceItemSeqId:val.invoiceItemSeqId, itemTypeEnumId:map('invoiceItemTypeId', (String) val.invoiceItemTypeId),
+                    assetId:val.inventoryItemId, productId:val.productId, parentInvoiceId:val.parentInvoiceId,
+                    parentInvoiceItemSeqId:val.parentInvoiceItemSeqId, taxableFlag:val.taxableFlag, quantity:val.quantity,
+                    quantityUomId:val.uomId, amount:val.amount, description:val.description,
+                    salesOpportunityId:val.salesOpportunityId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // TODO: overrideGlAccountId when glAccount mapping done
+            // NOTE: could look up taxAuthorityId by taxAuthGeoId and taxAuthPartyId
         }})
 
         /* ========== Order ========== */

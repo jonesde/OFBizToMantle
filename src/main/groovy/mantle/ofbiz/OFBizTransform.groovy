@@ -281,8 +281,8 @@ class OFBizTransform {
             et.addEntry(new SimpleEntry("mantle.order.OrderItem", [orderId:val.orderId, orderPartSeqId:orderPartSeqId,
                     orderItemSeqId:val.orderAdjustmentId, itemTypeEnumId:map('orderAdjustmentTypeId', (String) val.orderAdjustmentTypeId),
                     parentItemSeqId:(val.orderItemSeqId ?: val.originalAdjustmentId), comments:val.comments, itemDescription:val.description,
-                    unitAmount:val.amount, amountAlreadyIncluded:val.amountAlreadyIncluded, productFeatureId:val.productFeatureId,
-                    sourceReferenceId:val.sourceReferenceId, sourcePercentage:val.sourcePercentage,
+                    quantity:1.0, unitAmount:val.amount, amountAlreadyIncluded:val.amountAlreadyIncluded,
+                    productFeatureId:val.productFeatureId, sourceReferenceId:val.sourceReferenceId, sourcePercentage:val.sourcePercentage,
                     customerReferenceId:val.customerReferenceId, exemptAmount:val.exemptAmount,
                     isPromo:(val.orderAdjustmentTypeId == 'PROMOTION_ADJUSTMENT' ? 'Y' : 'N'), isModifiedPrice:val.isManual,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))

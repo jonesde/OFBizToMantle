@@ -35,13 +35,24 @@ class OFBizTransform {
             ['Person', 'PartyGroup', 'PartyRole', 'UserLogin',
                     'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber', 'PaymentMethod',
                     'ProductPrice', 'InventoryItem', 'PhysicalInventory',
-                    'OrderItemShipGroup'],
+                    'OrderItemShipGroup',
+                    'Shipment', 'ShipmentBoxType'],
             ['PartyClassification', 'PartyRelationship', 'CreditCard',
-                    'OrderRole', 'OrderContactMech', 'OrderItem'],
-            ['OrderAdjustment', 'OrderPaymentPreference', 'OrderItemShipGrpInvRes']
-            /* 'ItemIssuance', 'ShipmentReceipt' */
-            /* 'InventoryItemDetail' */
+                    'OrderRole', 'OrderContactMech', 'OrderItem',
+                    'ShipmentItem', 'ShipmentPackage', 'ShipmentRouteSegment'],
+            ['OrderAdjustment', 'OrderPaymentPreference', 'OrderItemShipGrpInvRes',
+                    'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg'],
+            ['InventoryItemDetail']
     ]
+
+    // NOTE: for really large imports there may be memory constraint issues and this would need to a be a disk based cache
+    static Map<String, Map<String, Object>> mappingCaches = new HashMap<>()
+    static Map<String, Object> getMappingCache(String name) {
+        Map<String, Object> cache = mappingCaches.get(name)
+        if (cache == null) { cache = new HashMap<>(); mappingCaches.put(name, cache) }
+        return cache
+    }
+    static void clearMappingCaches() { mappingCaches.clear() }
 
     static SimpleEtl.TransformConfiguration conf = new SimpleEtl.TransformConfiguration()
     static {
@@ -148,7 +159,7 @@ class OFBizTransform {
         }})
         conf.addTransformer("ShipmentReceipt", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // needs: Asset, OrderItem, Shipment, ReturnItem
-            et.addEntry(new SimpleEntry("mantle.product.issuance.AssetReceipt", [assetReceiptId:val.receiptId,
+            et.addEntry(new SimpleEntry("mantle.product.receipt.AssetReceipt", [assetReceiptId:val.receiptId,
                     assetId:val.inventoryItemId, productId:val.productId, orderId:val.orderId, orderItemSeqId:val.orderItemSeqId,
                     shipmentId:val.shipmentId, shipmentPackageSeqId:val.shipmentPackageSeqId, returnId:val.returnId,
                     returnItemSeqId:val.returnItemSeqId, rejectionReasonEnumId:map('rejectionId', (String) val.rejectionId),
@@ -254,10 +265,6 @@ class OFBizTransform {
                     statusId:map('paymentStatusId', (String) val.statusId), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
 
-/*
-
- */
-
         /* ========== Party ========== */
 
         conf.addTransformer("Party", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
@@ -332,10 +339,8 @@ class OFBizTransform {
         /* ========== PaymentMethod ========== */
 
         conf.addTransformer("PaymentMethod", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
-            String paymentMethodTypeEnumId = OFBizFieldMap.get('paymentMethodTypeEnumId', (String) val.paymentMethodTypeId)
-            if (!paymentMethodTypeEnumId) { logger.info("Skipping PaymentMethod ${val.paymentMethodId} of type ${val.paymentMethodTypeId}"); et.loadCurrent(false); return }
             et.addEntry(new SimpleEntry("mantle.account.method.PaymentMethod", [paymentMethodId:val.paymentMethodId,
-                    paymentMethodTypeEnumId:paymentMethodTypeEnumId,
+                    paymentMethodTypeEnumId:map('paymentMethodTypeEnumId', (String) val.paymentMethodTypeId),
                     ownerPartyId:val.partyId, description:val.description, fromDate:val.fromDate, thruDate:val.thruDate,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
             if (val.glAccountId) logger.warn("Found glAccountId ${val.glAccountId} in PaymentMethod ${val.paymentMethodId}")
@@ -389,6 +394,72 @@ class OFBizTransform {
             et.addEntry(new SimpleEntry("mantle.product.ProductPrice", [productPriceId:productPriceId, productId:val.productId,
                     priceTypeEnumId:priceTypeEnumId, pricePurposeEnumId:'PppPurchase', fromDate:val.fromDate, thruDate:val.thruDate,
                     price:val.price, priceUomId:val.currencyUomId, minQuantity:1.0, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+
+        /* ========== Shipment ========== */
+
+        conf.addTransformer("Shipment", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.shipment.Shipment", [shipmentId:val.shipmentId,
+                    shipmentTypeEnumId:map('shipmentTypeId', (String) val.shipmentTypeId),
+                    statusId:map('shipmentStatusId', (String) val.statusId), fromPartyId:val.partyIdFrom, toPartyId:val.partyIdTo,
+                    binLocationNumber:((String) val.picklistBinId)?.isLong() ? val.picklistBinId : null,
+                    entryDate:((String) val.createdTxStamp).take(23), estimatedReadyDate:val.estimatedReadyDate,
+                    estimatedShipDate:val.estimatedShipDate, estimatedArrivalDate:val.estimatedArrivalDate,
+                    latestCancelDate:val.latestCancelDate, estimatedShipCost:val.estimatedShipCost, costUomId:val.currencyUomId,
+                    handlingInstructions:val.handlingInstructions, addtlShippingCharge:val.additionalShippingCharge,
+                    addtlShippingChargeDesc:val.addtlShippingChargeDesc, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // WorkEffort not yet transformed: shipWorkEffortId:val.estimatedShipWorkEffId, receiveWorkEffortId:val.estimatedArrivalWorkEffId,
+            // NOTE: these redundant fields do not exist in mantle: primaryOrderId, primaryReturnId, primaryShipGroupSeqId, originFacilityId, destinationFacilityId, originContactMechId, originTelecomNumberId, destinationContactMechId, destinationTelecomNumberId
+        }})
+        conf.addTransformer("ShipmentBoxType", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.shipment.ShipmentBoxType", val + ([lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)] as Map<String, Object>)))
+        }})
+        conf.addTransformer("ShipmentItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            Map<String, Object> siMappingCache = getMappingCache("ShipmentItemProduct")
+            siMappingCache.put(((String) val.shipmentId) + ':' + ((String) val.shipmentItemSeqId), val.productId)
+            et.addEntry(new SimpleEntry("mantle.shipment.ShipmentItem", [shipmentId:val.shipmentId, productId:val.productId,
+                    quantity:val.quantity, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("ShipmentPackage", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.shipment.ShipmentPackage", [shipmentId:val.shipmentId,
+                    shipmentPackageSeqId:val.shipmentPackageSeqId, shipmentBoxTypeId:val.shipmentBoxTypeId,
+                    weight:val.weight, weightUomId:val.weightUomId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("ShipmentRouteSegment", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.shipment.ShipmentRouteSegment", [shipmentId:val.shipmentId,
+                    shipmentRouteSegmentSeqId:val.shipmentRouteSegmentId, deliveryId:val.deliveryId,
+                    originFacilityId:val.originFacilityId, originPostalContactMechId:val.originContactMechId,
+                    originTelecomContactMechId:val.originTelecomNumberId, destinationFacilityId:val.destFacilityId,
+                    destPostalContactMechId:val.destContactMechId, destTelecomContactMechId:val.destTelecomNumberId,
+                    shipmentMethodEnumId:map('shipmentMethodTypeId', (String) val.shipmentMethodTypeId),
+                    carrierPartyId:val.carrierPartyId, statusId:map('carrierServiceStatusId', (String) val.carrierServiceStatusId),
+                    carrierDeliveryZone:val.carrierDeliveryZone, carrierRestrictionCodes:val.carrierRestrictionCodes,
+                    carrierRestrictionDesc:val.carrierRestrictionDesc, billingWeight:val.billingWeight,
+                    billingWeightUomId:val.billingWeightUomId, actualTransportCost:val.actualTransportCost,
+                    actualServiceCost:val.actualServiceCost, actualOtherCost:val.actualOtherCost, actualCost:val.actualCost,
+                    costUomId:val.currencyUomId, actualStartDate:val.actualStartDate, actualArrivalDate:val.actualArrivalDate,
+                    estimatedStartDate:val.estimatedStartDate, estimatedArrivalDate:val.estimatedArrivalDate,
+                    trackingIdNumber:val.trackingIdNumber, trackingDigest:val.trackingDigest, homeDeliveryType:val.homeDeliveryType,
+                    homeDeliveryDate:val.homeDeliveryDate, thirdPartyAccountNumber:val.thirdPartyAccountNumber,
+                    thirdPartyPostalCode:val.thirdPartyPostalCode, thirdPartyCountryGeoCode:val.thirdPartyCountryGeoCode,
+                    highValueReport:val.upsHighValueReport, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("ShipmentPackageContent", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            Map<String, Object> siMappingCache = getMappingCache("ShipmentItemProduct")
+            String productId = siMappingCache.get(((String) val.shipmentId) + ':' + ((String) val.shipmentItemSeqId))
+            et.addEntry(new SimpleEntry("mantle.shipment.ShipmentPackageContent", [shipmentId:val.shipmentId,
+                    shipmentPackageSeqId:val.shipmentPackageSeqId, productId:productId,
+                    quantity:val.quantity, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("ShipmentPackageRouteSeg", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.shipment.ShipmentPackageRouteSeg", [shipmentId:val.shipmentId,
+                    shipmentPackageSeqId:val.shipmentPackageSeqId, shipmentRouteSegmentSeqId:val.shipmentRouteSegmentId,
+                    trackingCode:val.trackingCode, boxNumber:val.boxNumber, labelImage:val.labelImage,
+                    labelIntlSignImage:val.labelIntlSignImage, labelHtml:val.labelHtml, labelPrinted:val.labelPrinted,
+                    internationalInvoice:val.internationalInvoice,
+                    packageTransportAmount:val.packageTransportCost, packageServiceAmount:val.packageServiceCost,
+                    packageOtherAmount:val.packageOtherCost, codAmount:val.codAmount, insuredAmount:val.insuredAmount,
+                    amountUomId:val.currencyUomId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
 
         /* =========== Custom Transformer Examples =========== */

@@ -117,11 +117,24 @@ class OFBizFieldMap {
         varianceReasonEnumId:[VAR_DAMAGED:'InVrDamaged', VAR_FOUND:'InVrFound', VAR_INTEGR:'InVrIntegration', VAR_LOST:'InVrLost',
                 VAR_MISSHIP_ORDERED:'InVrMisShipOrdered', VAR_MISSHIP_SHIPPED:'InVrMisShipShipped', VAR_SAMPLE:'InVrSample', VAR_STOLEN:'InVrStolen'],
         rejectionId:[SRJ_DAMAGED:'ArjDamaged', SRJ_LOST_INTRANS:'ArjLost', SRJ_NOT_ORDERED:'ArjNotOrdered',
-                SRJ_NOT_SPEC:'ArjNotToSpec', SRJ_OVER_SHIPPED:'ArjOverShipped']
+                SRJ_NOT_SPEC:'ArjNotToSpec', SRJ_OVER_SHIPPED:'ArjOverShipped'],
+
+        // Shipment
+        shipmentTypeId:[DROP_SHIPMENT:'ShpTpDrop', INCOMING_SHIPMENT:'ShpTpIncoming', OUTGOING_SHIPMENT:'ShpTpOutgoing',
+                PURCHASE_RETURN:'ShpTpPurchaseReturn', PURCHASE_SHIPMENT:'ShpTpPurchase', SALES_RETURN:'ShpTpSalesReturn',
+                SALES_SHIPMENT:'ShpTpSales', TRANSFER:'ShpTpTransfer'],
+        shipmentStatusId:[SHIPMENT_CANCELLED:'ShipCancelled', SHIPMENT_DELIVERED:'ShipDelivered', SHIPMENT_INPUT:'ShipInput',
+                SHIPMENT_PACKED:'ShipPacked', SHIPMENT_PICKED:'ShipPicked', SHIPMENT_SCHEDULED:'ShipScheduled',
+                SHIPMENT_SHIPPED:'ShipShipped',
+                PURCH_SHIP_RECEIVED:'ShipDelivered', PURCH_SHIP_SHIPPED:'ShipShipped', PURCH_SHIP_CREATED:'ShipInput'],
+        carrierServiceStatusId:[SHRSCS_ACCEPTED:'ShrssAccepted', SHRSCS_CONFIRMED:'ShrssConfirmed',
+                SHRSCS_NOT_STARTED:'ShrssNotStarted', SHRSCS_VOIDED:'ShrssVoided']
     ]
 }
 
 /*
+
+
 
 RETURN_ACCEPTED:'', RETURN_CANCELLED:'', RETURN_COMPLETED:'', RETURN_MAN_REFUND:'', RETURN_RECEIVED:'', RETURN_REQUESTED:'',
 

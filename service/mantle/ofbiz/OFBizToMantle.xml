@@ -58,6 +58,7 @@ along with this software (see the LICENSE.md file). If not, see
                 if (etlInfo.stopAll) break
             }
 
+            OFBizTransform.clearMappingCaches()
             logger.info("=== ETL Finished Load of ${etlInfo.entityCount} entities in ${(System.currentTimeMillis() - startTime) / 1000}s (extracted: ${etlInfo.extractCount}, skipped: ${etlInfo.skipCount}, loaded: ${etlInfo.loadCount})")
 
 

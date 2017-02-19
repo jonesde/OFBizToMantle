@@ -36,21 +36,19 @@ class OFBizTransform {
                     'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
                     'PaymentMethod',
                     'ProductPrice', 'InventoryItem', 'PhysicalInventory',
-                    'OrderItemShipGroup',
                     'Shipment', 'ShipmentBoxType',
                     'Invoice',
                     'FinAccount'],
             ['PartyClassification', 'PartyRelationship', 'CreditCard',
-                    'OrderRole', 'OrderContactMech', 'OrderItem',
+                    'OrderItemShipGroup',
                     'ShipmentItem', 'ShipmentPackage', 'ShipmentRouteSegment',
                     'InvoiceContactMech', 'InvoiceRole', 'InvoiceItem',
                     'FinAccountTrans'],
-            ['OrderAdjustment', 'OrderPaymentPreference', 'OrderItemShipGrpInvRes',
-                    'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg', 'OrderShipment',
-                    'Payment'],
-            ['InventoryItemDetail',
-                    'OrderAdjustmentBilling', 'OrderItemBilling',
-                    'PaymentApplication', 'PaymentGatewayResponse']
+            ['OrderRole', 'Payment'],
+            ['OrderItem'],
+            ['OrderAdjustment', 'OrderContactMech', 'OrderItemShipGrpInvRes', 'OrderPaymentPreference',
+                    'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg', 'OrderShipment'],
+            ['PaymentApplication', 'PaymentGatewayResponse', 'InventoryItemDetail', 'OrderItemBilling', 'OrderAdjustmentBilling']
     ]
 
     // NOTE: for really large imports there may be memory constraint issues and this would need to a be a disk based cache
@@ -197,11 +195,12 @@ class OFBizTransform {
             // needs: Asset, OrderItem, Shipment, ReturnItem
             et.addEntry(new SimpleEntry("mantle.product.receipt.AssetReceipt", [assetReceiptId:val.receiptId,
                     assetId:val.inventoryItemId, productId:val.productId, orderId:val.orderId, orderItemSeqId:val.orderItemSeqId,
-                    shipmentId:val.shipmentId, shipmentPackageSeqId:val.shipmentPackageSeqId, returnId:val.returnId,
-                    returnItemSeqId:val.returnItemSeqId, rejectionReasonEnumId:map('rejectionId', (String) val.rejectionId),
+                    shipmentId:val.shipmentId, shipmentPackageSeqId:val.shipmentPackageSeqId,
+                    rejectionReasonEnumId:map('rejectionId', (String) val.rejectionId),
                     receivedByUserId:val.receivedByUserLoginId, receivedDate:val.datetimeReceived, itemDescription:val.itemDescription,
                     quantityAccepted:val.quantityAccepted, quantityRejected:val.quantityRejected,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // NOTE: skipping because returns handled: returnId:val.returnId, returnItemSeqId:val.returnItemSeqId
         }})
 
         /* ========== Invoice ========== */
@@ -230,12 +229,12 @@ class OFBizTransform {
         conf.addTransformer("InvoiceItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             et.addEntry(new SimpleEntry("mantle.account.invoice.InvoiceItem", [invoiceId:val.invoiceId,
                     invoiceItemSeqId:val.invoiceItemSeqId, itemTypeEnumId:map('invoiceItemTypeId', (String) val.invoiceItemTypeId),
-                    assetId:val.inventoryItemId, productId:val.productId, parentInvoiceId:val.parentInvoiceId,
-                    parentInvoiceItemSeqId:val.parentInvoiceItemSeqId, taxableFlag:val.taxableFlag, quantity:val.quantity,
+                    assetId:val.inventoryItemId, productId:val.productId, taxableFlag:val.taxableFlag, quantity:val.quantity,
                     quantityUomId:val.uomId, amount:val.amount, description:val.description,
                     salesOpportunityId:val.salesOpportunityId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
             // TODO: overrideGlAccountId when glAccount mapping done
             // NOTE: could look up taxAuthorityId by taxAuthGeoId and taxAuthPartyId
+            // NOTE: skipping, not generally needed and avoids fk error: parentInvoiceId:val.parentInvoiceId, parentInvoiceItemSeqId:val.parentInvoiceItemSeqId
         }})
 
         /* ========== Order ========== */
@@ -294,6 +293,11 @@ class OFBizTransform {
         conf.addTransformer("OrderItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // must be after OrderHeader and OrderItemShipGroup
             String orderPartSeqId = "00001" // optimized for only single part orders
+            if (Moqui.executionContext.entity.find("mantle.order.OrderPart").condition("orderId", val.orderId).
+                    condition("orderPartSeqId", orderPartSeqId).one() == null) {
+                logger.info("Found OrderItem in order ${val.orderId} that has no OrderPart, creating dummy record")
+                et.addEntry(new SimpleEntry("mantle.order.OrderPart", [orderId:val.orderId, orderPartSeqId:orderPartSeqId]))
+            }
             et.addEntry(new SimpleEntry("mantle.order.OrderItem", [orderId:val.orderId, orderPartSeqId:orderPartSeqId,
                     orderItemSeqId:val.orderItemSeqId, productId:val.productId, otherPartyProductId:val.supplierProductId,
                     itemTypeEnumId:map('orderItemTypeId', (String) val.orderItemTypeId),
@@ -464,7 +468,6 @@ class OFBizTransform {
                     paymentMethodTypeEnumId:map('paymentMethodTypeEnumId', (String) val.paymentMethodTypeId),
                     ownerPartyId:val.partyId, description:val.description, fromDate:val.fromDate, thruDate:val.thruDate,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
-            if (val.glAccountId) logger.warn("Found glAccountId ${val.glAccountId} in PaymentMethod ${val.paymentMethodId}")
             // TODO: skipping glAccountId for now, needs GlAccount mapping
             // NOTE: skipping finAccountId for now, needs FinAccount transformer
         }})

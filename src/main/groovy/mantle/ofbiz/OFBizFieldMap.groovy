@@ -54,8 +54,8 @@ class OFBizFieldMap {
         // Invoice
         invoiceTypeId:[COMMISSION_INVOICE:'InvoiceCommission', CUST_RTN_INVOICE:'InvoiceReturn', PAYROL_INVOICE:'InvoicePayroll',
                 PURCHASE_INVOICE:'InvoiceSales', PURC_RTN_INVOICE:'InvoiceReturn', PUR_INV_TEMPLATE:'InvoiceTemplate',
-                SALES_INVOICE:'InvoiceSales', SALES_INV_TEMPLATE:'InvoiceTemplate', TEMPLATE:'InvoiceTemplate'],
-                // INTEREST_INVOICE, VENDOR_CREDIT_MEMO
+                SALES_INVOICE:'InvoiceSales', SALES_INV_TEMPLATE:'InvoiceTemplate', TEMPLATE:'InvoiceTemplate',
+                VENDOR_CREDIT_MEMO:'InvoiceCreditMemo', INTEREST_INVOICE:'InvoiceSales'],
         invoiceIncomingStatusId:[INVOICE_IN_PROCESS:'InvoiceIncoming', INVOICE_APPROVED:'InvoiceApproved', INVOICE_SENT:'InvoiceIncoming',
                 INVOICE_RECEIVED:'InvoiceReceived', INVOICE_READY:'InvoiceReceived', INVOICE_PAID:'InvoicePmtSent',
                 INVOICE_WRITEOFF:'InvoiceWriteOff', INVOICE_CANCELLED:'InvoiceCancelled'],
@@ -113,17 +113,22 @@ class OFBizFieldMap {
         // Payment
         paymentTypeId:[COMMISSION_PAYMENT:'PtInvoicePayment', CUSTOMER_DEPOSIT:'PtPrePayment', CUSTOMER_PAYMENT:'PtInvoicePayment',
                 CUSTOMER_REFUND:'PtRefund', DISBURSEMENT:'PtDisbursement', SALES_TAX_PAYMENT:'PtInvoicePayment',
-                TAX_PAYMENT:'PtInvoicePayment', VENDOR_PAYMENT:'PtInvoicePayment', VENDOR_PREPAY:'PtPrePayment'],
-                // ADJUSTMENT, GC_DEPOSIT, GC_WITHDRAWAL, INCOME_TAX_PAYMENT, INTEREST_RECEIPT, PAY_CHECK, PAYROLL_TAX_PAYMENT, PAYROL_PAYMENT, POS_PAID_IN, POS_PAID_OUT, RECEIPT, SALES_TAX_PAYMENT, TAX_PAYMENT, VENDOR_PAYMENT, VENDOR_PREPAY
+                TAX_PAYMENT:'PtInvoicePayment', VENDOR_PAYMENT:'PtInvoicePayment', VENDOR_PREPAY:'PtPrePayment',
+                ADJUSTMENT:'PtInvoicePayment', RECEIPT:'PtPrePayment', GC_DEPOSIT:'PtPrePayment', GC_WITHDRAWAL:'PtDisbursement',
+                INCOME_TAX_PAYMENT:'PtInvoicePayment', INTEREST_RECEIPT:'PtInvoicePayment', PAY_CHECK:'PtInvoicePayment',
+                PAYROLL_TAX_PAYMENT:'PtInvoicePayment', PAYROL_PAYMENT:'PtInvoicePayment'],
+                // POS_PAID_IN, POS_PAID_OUT
         // paymentInstrumentEnumId and paymentMethodTypeEnumId are based on paymentMethodTypeId
         paymentInstrumentEnumId:[CASH:'PiCash', CERTIFIED_CHECK:'PiCertifiedCheck', COMPANY_ACCOUNT:'PiCompanyAccount',
                 COMPANY_CHECK:'PiCompanyCheck', CREDIT_CARD:'PiCreditCard', EFT_ACCOUNT:'PiAch', EXT_BILLACT:'PiBillingAccount',
-                EXT_COD:'PiCod', EXT_OFFLINE:'PiCash', FIN_ACCOUNT:'PiFinancialAccount', GIFT_CARD:'PiGiftCard',
-                GIFT_CERTIFICATE:'PiGiftCerificate', MONEY_ORDER:'PiMoneyOrder', PERSONAL_CHECK:'PiPersonalCheck', PETTY_CASH:'PiCash'],
-                // ADJUSTMENT, EXT_AMAZON, EXT_AUTHORIZE_NET, EXT_EBAY, EXT_IDEAL, EXT_PAYPAL, EXT_WORLDPAY,
+                EXT_COD:'PiCod', EXT_OFFLINE:'PiCash', EXT_PAYPAL:'PiPayPalAccount', FIN_ACCOUNT:'PiFinancialAccount', GIFT_CARD:'PiGiftCard',
+                GIFT_CERTIFICATE:'PiGiftCerificate', MONEY_ORDER:'PiMoneyOrder', PERSONAL_CHECK:'PiPersonalCheck',
+                PETTY_CASH:'PiCash', EXT_AMAZON:'PiCreditCard', EXT_AUTHORIZE_NET:'PiCreditCard', ADJUSTMENT:'PiOther'],
+                // EXT_EBAY, EXT_IDEAL, EXT_WORLDPAY
         paymentMethodTypeEnumId:[CERTIFIED_CHECK:'PmtBankAccount', COMPANY_CHECK:'PmtBankAccount', EFT_ACCOUNT:'PmtBankAccount',
-                CREDIT_CARD:'PmtCreditCard', FIN_ACCOUNT:'PmtFinancialAccount', GIFT_CARD:'PmtGiftCard', PERSONAL_CHECK:'PmtBankAccount'],
-                // ADJUSTMENT,CASH,COMPANY_ACCOUNT,EXT_AMAZON,EXT_AUTHORIZE_NET,EXT_BILLACT,EXT_COD,EXT_EBAY,EXT_IDEAL,EXT_OFFLINE,EXT_PAYPAL,EXT_WORLDPAY,GIFT_CERTIFICATE,MONEY_ORDER,PETTY_CASH
+                CREDIT_CARD:'PmtCreditCard', FIN_ACCOUNT:'PmtFinancialAccount', GIFT_CARD:'PmtGiftCard', PERSONAL_CHECK:'PmtBankAccount',
+                EXT_PAYPAL:'PmtPayPalAccount', PETTY_CASH:'PmtOther', CASH:'PmtOther', ADJUSTMENT:'PmtOther', EXT_AUTHORIZE_NET:'PmtOther'],
+                // COMPANY_ACCOUNT,EXT_AMAZON,EXT_BILLACT,EXT_COD,EXT_EBAY,EXT_IDEAL,EXT_OFFLINE,EXT_WORLDPAY,GIFT_CERTIFICATE,MONEY_ORDER
         cardType:[AmericanExpress:'CctAmericanExpress', Discover:'CctDiscover', MasterCard:'CctMastercard', Visa:'CctVisa'],
         paymentStatusId:[PAYMENT_AUTHORIZED:'PmntAuthorized', PAYMENT_CANCELLED:'PmntCancelled', PAYMENT_DECLINED:'PmntDeclined',
                 PAYMENT_NOT_AUTH:'PmntPromised', PAYMENT_NOT_RECEIVED:'PmntPromised', PAYMENT_RECEIVED:'PmntDelivered',

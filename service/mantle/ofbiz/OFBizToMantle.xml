@@ -32,7 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
             import org.slf4j.Logger
             import org.slf4j.LoggerFactory
 
-            boolean runParallel = false
+            boolean runParallel = true
 
             Logger logger = LoggerFactory.getLogger('OFBizToMantle.importOFBizData')
             ExecutionContext ec = context.ec
@@ -41,6 +41,8 @@ along with this software (see the LICENSE.md file). If not, see
             EtlInfo etlInfo = new EtlInfo()
 
             for (List<String> nameList in OFBizTransform.loadOrderParallel) {
+                logger.info("=== ETL Starting parallel set ${nameList}")
+
                 List<Thread> threadList = []
                 for (String entityName in nameList) {
                     ResourceReference fileRef = dirRef.getChild(entityName + '.xml')
@@ -55,7 +57,10 @@ along with this software (see the LICENSE.md file). If not, see
                 if (runParallel) for (Thread thread in threadList) thread.join()
 
                 logger.info("=== ETL Finished parallel set ${nameList}")
-                if (etlInfo.stopAll) break
+                if (etlInfo.stopAll) {
+                    logger.warn("Got a stop all from an error, stopping")
+                    break
+                }
             }
 
             OFBizTransform.clearMappingCaches()
@@ -69,8 +74,8 @@ along with this software (see the LICENSE.md file). If not, see
 
             Thread startEtl(String entityName, ResourceReference fileRef, EtlInfo etlInfo) {
                 SimpleEtl.Extractor extractor = new FlatXmlExtractor(fileRef)
-                SimpleEtl.Loader loader = ec.entity.makeEtlLoader().useTryInsert().dummyFks()
-                SimpleEtl etl = new SimpleEtl(extractor, loader).setConfiguration(OFBizTransform.conf)
+                SimpleEtl.Loader loader = ec.entity.makeEtlLoader().useTryInsert() // .dummyFks()
+                SimpleEtl etl = new SimpleEtl(extractor, loader).setConfiguration(OFBizTransform.conf).stopOnError()
 
                 ExecutionContextImpl.ThreadPoolRunnable runnable = new ExecutionContextImpl.ThreadPoolRunnable((ExecutionContextFactoryImpl) ec.factory, {
                     ArtifactExecutionFacadeImpl ae = (ArtifactExecutionFacadeImpl) Moqui.executionContext.getArtifactExecution()

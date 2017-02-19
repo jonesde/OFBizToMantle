@@ -123,6 +123,9 @@ class OFBizFieldMap {
                 PAYMENT_REFUNDED:'PmntRefunded', PAYMENT_SETTLED:'PmntDelivered',
                 PMNT_CANCELLED:'PmntCancelled', PMNT_CONFIRMED:'PmntConfirmed', PMNT_NOT_PAID:'PmntPromised',
                 PMNT_RECEIVED:'PmntDelivered', PMNT_SENT:'PmntDelivered', PMNT_VOID:'PmntVoid'],
+        paymentServiceTypeEnumId:[PRDS_PAY_AUTH:'PgoAuthorize', PRDS_PAY_AUTH_VERIFY:'PgoValidateAuthorize',
+                PRDS_PAY_CAPTURE:'PgoCapture', PRDS_PAY_CREDIT:'PgoAuthAndCapture', PRDS_PAY_REAUTH:'PgoAuthorize',
+                PRDS_PAY_REFUND:'PgoRefund', PRDS_PAY_RELEASE:'PgoRelease'],
 
 
         // Product
@@ -159,7 +162,6 @@ class OFBizFieldMap {
 }
 
 /*
-
 
 
 

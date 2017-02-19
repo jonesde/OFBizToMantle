@@ -47,7 +47,9 @@ class OFBizTransform {
             ['OrderAdjustment', 'OrderPaymentPreference', 'OrderItemShipGrpInvRes',
                     'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg', 'OrderShipment',
                     'PaymentApplication'],
-            ['InventoryItemDetail']
+            ['InventoryItemDetail',
+                    'OrderAdjustmentBilling', 'OrderItemBilling',
+                    'PaymentGatewayResponse']
     ]
 
     // NOTE: for really large imports there may be memory constraint issues and this would need to a be a disk based cache
@@ -220,6 +222,7 @@ class OFBizTransform {
             // NOTE: not mapping visitId, productStoreId, billingAccountId, syncStatusId (though could be at some point)
         }})
         conf.addTransformer("OrderItemShipGroup", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            def partTotal = Moqui.executionContext.entity.find("mantle.order.OrderHeader").condition("orderId", val.orderId).one()?.grandTotal
             et.addEntry(new SimpleEntry("mantle.order.OrderPart", [orderId:val.orderId,
                     orderPartSeqId:((String) val.shipGroupSeqId).padLeft(5, '0'),
                     shipmentMethodEnumId:map('shipmentMethodTypeId', (String) val.shipmentMethodTypeId),
@@ -227,7 +230,7 @@ class OFBizTransform {
                     facilityId:val.facilityId, postalContactMechId:val.contactMechId, telecomContactMechId:val.telecomContactMechId,
                     trackingNumber:val.trackingNumber, shippingInstructions:val.shippingInstructions, maySplit:val.maySplit,
                     giftMessage:val.giftMessage, isGift:val.isGift, shipAfterDate:val.shipAfterDate, shipBeforeDate:val.shipByDate,
-                    estimatedShipDate:val.estimatedShipDate, estimatedDeliveryDate:val.estimatedDeliveryDate,
+                    estimatedShipDate:val.estimatedShipDate, estimatedDeliveryDate:val.estimatedDeliveryDate, partTotal:partTotal,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
         conf.addTransformer("OrderRole", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
@@ -302,6 +305,19 @@ class OFBizTransform {
                     swipedFlag:val.swipedFlag, amount:val.maxAmount, processAttempt:val.processAttempt, needsNsfRetry:val.needsNsfRetry,
                     paymentAuthCode:val.manualAuthCode, paymentRefNum:val.manualRefNum,
                     statusId:map('paymentStatusId', (String) val.statusId), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("OrderItemBilling", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // after OrderItem, InvoiceItem, AssetReceipt, AssetIssuance
+            et.addEntry(new SimpleEntry("mantle.order.OrderItemBilling", [orderItemBillingId:UUID.randomUUID().toString(),
+                    orderId:val.orderId, orderItemSeqId:val.orderItemSeqId, invoiceId:val.invoiceId, invoiceItemSeqId:val.invoiceItemSeqId,
+                    assetIssuanceId:val.itemIssuanceId, assetReceiptId:val.shipmentReceiptId, quantity:val.quantity, amount:val.amount,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("OrderAdjustmentBilling", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            String orderId = Moqui.executionContext.entity.find("mantle.order.OrderItem").condition("orderItemSeqId", val.orderAdjustmentId).one()?.orderId
+            et.addEntry(new SimpleEntry("mantle.order.OrderItemBilling", [orderItemBillingId:UUID.randomUUID().toString(),
+                    orderId:orderId, orderItemSeqId:val.orderAdjustmentId, invoiceId:val.invoiceId, invoiceItemSeqId:val.invoiceItemSeqId,
+                    quantity:1.0, amount:val.amount, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
 
         /* ========== Party ========== */
@@ -383,10 +399,11 @@ class OFBizTransform {
                     paymentInstrumentEnumId:map('paymentInstrumentEnumId', (String) val.paymentMethodTypeId),
                     paymentMethodId:val.paymentMethodId, statusId:map('paymentStatusId', (String) val.statusId),
                     effectiveDate:val.effectiveDate, amount:val.amount, amountUomId:val.currencyUomId,
-                    paymentRefNum:val.paymentRefNum, comments:val.comments, finAccountTransId:val.finAccountTransId,
+                    paymentRefNum:val.paymentRefNum, comments:val.comments,
                     /*overrideGlAccountId:val.overrideGlAccountId,*/ originalCurrencyAmount:val.actualCurrencyAmount,
                     originalCurrencyUomId:val.actualCurrencyUomId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
-            // TODO: anything with paymentGatewayResponseId, paymentPreferenceId
+            // NOTE: doing nothing with paymentGatewayResponseId, paymentPreferenceId
+            // TODO: not setting as those aren't loaded yet: finAccountTransId:val.finAccountTransId,
             // TODO: skipping overrideGlAccountId for now, needs GlAccount mapping
         }})
         conf.addTransformer("PaymentApplication", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
@@ -394,6 +411,20 @@ class OFBizTransform {
                     paymentId:val.paymentId, invoiceId:val.invoiceId, invoiceItemSeqId:val.invoiceItemSeqId,
                     billingAccountId:val.billingAccountId, toPaymentId:val.toPaymentId, taxAuthGeoId:val.taxAuthGeoId,
                     amountApplied:val.amountApplied, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // TODO: skipping overrideGlAccountId for now, needs GlAccount mapping
+        }})
+        conf.addTransformer("PaymentGatewayResponse", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // after Payment and OrderPaymentPreference
+            et.addEntry(new SimpleEntry("mantle.account.method.PaymentGatewayResponse", [
+                    paymentGatewayResponseId:val.paymentGatewayResponseId,
+                    paymentOperationEnumId:map('paymentServiceTypeEnumId', (String) val.paymentServiceTypeEnumId),
+                    paymentId:'OPP' + ((String) val.orderPaymentPreferenceId), paymentMethodId:val.paymentMethodId,
+                    amount:val.amount, amountUomId:val.currencyUomId, referenceNum:val.referenceNum, altReference:val.altReference,
+                    subReference:val.subReference, responseCode:val.gatewayCode, reasonCode:val.gatewayFlag,
+                    avsResult:val.gatewayAvsResult, cvResult:val.gatewayCvResult, scoreResult:val.gatewayScoreResult,
+                    reasonMessage:val.gatewayMessage, transactionDate:val.transactionDate, resultDeclined:val.resultDeclined,
+                    resultNsf:val.resultNsf, resultBadExpire:val.resultBadExpire, resultBadCardNumber:val.resultBadCardNumber,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
             // TODO: skipping overrideGlAccountId for now, needs GlAccount mapping
         }})
 
@@ -476,10 +507,20 @@ class OFBizTransform {
             et.addEntry(new SimpleEntry("mantle.shipment.ShipmentBoxType", val + ([lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)] as Map<String, Object>)))
         }})
         conf.addTransformer("ShipmentItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            if (!val.productId) { logger.warn("Skipping shipment ${val.shipmentId} item ${val.shipmentItemSeqId} with no productId"); et.loadCurrent(false); return }
             Map<String, Object> siMappingCache = getMappingCache("ShipmentItemProduct")
             siMappingCache.put(((String) val.shipmentId) + ':' + ((String) val.shipmentItemSeqId), val.productId)
-            et.addEntry(new SimpleEntry("mantle.shipment.ShipmentItem", [shipmentId:val.shipmentId, productId:val.productId,
-                    quantity:val.quantity, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            EntityValue existingItem = Moqui.executionContext.entity.find("mantle.shipment.ShipmentItem")
+                    .condition("shipmentId", val.shipmentId).condition("productId", val.productId).one()
+            if (existingItem != null) {
+                // this is a bit of a hack, won't produce correct output if loading into a file instead of to the DB
+                existingItem.quantity = ((BigDecimal) existingItem.quantity) + (val.quantity as BigDecimal)
+                existingItem.update()
+                logger.warn("Adding quantity from shipment ${val.shipmentId} item ${val.shipmentItemSeqId} with productId ${val.productId} that was in another item")
+            } else {
+                et.addEntry(new SimpleEntry("mantle.shipment.ShipmentItem", [shipmentId:val.shipmentId, productId:val.productId,
+                        quantity:val.quantity, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            }
         }})
         conf.addTransformer("ShipmentPackage", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             et.addEntry(new SimpleEntry("mantle.shipment.ShipmentPackage", [shipmentId:val.shipmentId,
@@ -529,6 +570,7 @@ class OFBizTransform {
                     shipmentId:val.shipmentId, productId:productId, quantity:val.quantity, orderId:val.orderId,
                     orderItemSeqId:val.orderItemSeqId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
+        // not doing ShipmentItemBilling (shipmentId, shipmentItemSeqId, invoiceId, invoiceItemSeqId), would need to be merged with ShipmentItemSource records from OrderShipment
 
         /* =========== Custom Transformer Examples =========== */
 

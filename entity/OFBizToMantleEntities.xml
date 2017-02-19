@@ -17,4 +17,10 @@ along with this software (see the LICENSE.md file). If not, see
     <extend-entity entity-name="OrderItem" package="mantle.order">
         <index name="ORDITM_SEQ_ID"><index-field name="orderItemSeqId"/></index><!-- this is not needed for most things, for OFBiz import where OrderAdjustment is mapped to OrderItem it does a lookup on just orderItemSeqId -->
     </extend-entity>
+    <entity entity-name="TemporaryNote" package="mantle.ofbiz">
+        <field name="noteId" type="id" is-pk="true"/>
+        <field name="noteName" type="text-medium"/>
+        <field name="noteInfo" type="text-long"/>
+        <field name="noteDateTime" type="date-time"/>
+    </entity>
 </entities>

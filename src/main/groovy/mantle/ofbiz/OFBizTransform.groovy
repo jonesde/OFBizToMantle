@@ -15,7 +15,6 @@ package mantle.ofbiz
 
 import groovy.transform.CompileStatic
 import org.moqui.Moqui
-import org.moqui.entity.EntityList
 import org.moqui.entity.EntityValue
 import org.moqui.etl.SimpleEtl
 import org.moqui.etl.SimpleEtl.EntryTransform
@@ -31,8 +30,8 @@ class OFBizTransform {
     static Logger logger = LoggerFactory.getLogger(OFBizTransform.class)
 
     static List<List<String>> loadOrderParallel = [
-            ['Party', 'ContactMech', 'Product', 'Lot', 'OrderHeader'],
-            ['Person', 'PartyGroup', 'PartyRole', 'UserLogin',
+            ['NoteData', 'Party', 'ContactMech', 'Product', 'Lot', 'OrderHeader'],
+            ['PartyNote', 'Person', 'PartyGroup', 'PartyRole', 'UserLogin',
                     'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
                     'PaymentMethod',
                     'ProductPrice', 'InventoryItem', 'PhysicalInventory',
@@ -40,7 +39,7 @@ class OFBizTransform {
                     'Invoice',
                     'FinAccount'],
             ['PartyClassification', 'PartyRelationship', 'CreditCard',
-                    'OrderItemShipGroup',
+                    'OrderItemShipGroup', 'OrderHeaderNote',
                     'ShipmentItem', 'ShipmentPackage', 'ShipmentRouteSegment',
                     'InvoiceContactMech', 'InvoiceRole', 'InvoiceItem',
                     'FinAccountTrans'],
@@ -62,6 +61,14 @@ class OFBizTransform {
 
     static SimpleEtl.TransformConfiguration conf = new SimpleEtl.TransformConfiguration()
     static {
+        // load NoteData to temporary table to join with Party/Order/etc note records
+        conf.addTransformer("NoteData", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            String noteInfo = val.noteInfo
+            if (!noteInfo || "NONE".equals(noteInfo)) { et.loadCurrent(false); return }
+            if (noteInfo.length() > 4000) val.noteInfo = noteInfo.substring(0,4000)
+            et.addEntry(new SimpleEntry("mantle.ofbiz.TemporaryNote", val))
+        }})
+
         /* ========== ContactMech ========== */
 
         conf.addTransformer("ContactMech", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
@@ -352,6 +359,13 @@ class OFBizTransform {
                     orderId:orderId, orderItemSeqId:val.orderAdjustmentId, invoiceId:val.invoiceId, invoiceItemSeqId:val.invoiceItemSeqId,
                     quantity:1.0, amount:val.amount, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
+        conf.addTransformer("OrderHeaderNote", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            EntityValue temporaryNote = Moqui.executionContext.entity.find("mantle.ofbiz.TemporaryNote").condition("noteId", val.noteId).one()
+            if (temporaryNote == null) { et.loadCurrent(false); return }
+            et.addEntry(new SimpleEntry("mantle.order.OrderNote", [orderId:val.orderId, internalNote:val.internalNote,
+                    noteDate:temporaryNote.noteDateTime, noteText:temporaryNote.noteInfo,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
 
         /* ========== Party ========== */
 
@@ -364,7 +378,13 @@ class OFBizTransform {
                 officeSiteName:(!val.officeSiteName || ((String) val.officeSiteName).toLowerCase() == ((String) val.groupName).toLowerCase() ? '' : val.officeSiteName),
                 annualRevenue:val.annualRevenue, numEmployees:val.numEmployees, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
-        // TODO: how to handle PartyNote combined with NoteData? split easy, combine another question
+        conf.addTransformer("PartyNote", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            EntityValue temporaryNote = Moqui.executionContext.entity.find("mantle.ofbiz.TemporaryNote").condition("noteId", val.noteId).one()
+            if (temporaryNote == null) { et.loadCurrent(false); return }
+            et.addEntry(new SimpleEntry("mantle.party.PartyNote", [partyId:val.partyId, internalNote:'Y',
+                    noteDate:temporaryNote.noteDateTime, noteText:temporaryNote.noteInfo,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
         conf.addTransformer("PartyRelationship", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // TODO: should from/to be reversed? relationship types and approach varies somewhat so some, but not all, may need reversing
             et.addEntry(new SimpleEntry("mantle.party.PartyRelationship", [partyRelationshipId:UUID.randomUUID().toString(),
@@ -390,7 +410,6 @@ class OFBizTransform {
             }
             et.addEntry(new SimpleEntry("mantle.party.PartyRole", [partyId:val.partyId, roleTypeId:rtMapped, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
-        
         conf.addTransformer("Person", new Transformer() { void transform(EntryTransform et) {
             Map<String, Object> val = et.entry.etlValues
             String firstName = ((String) val.firstName)?.trim()?.capitalize()
@@ -401,8 +420,6 @@ class OFBizTransform {
             et.addEntry(new SimpleEntry("mantle.party.Person", entryMap))
             // NOTE could add PartyIdentification records for socialSecurityNumber, passportNumber/passportExpireDate
         }})
-
-
         conf.addTransformer("UserLogin", new Transformer() { void transform(EntryTransform et) {
             Map<String, Object> val = et.entry.etlValues
             String currentPassword = (String) val.currentPassword

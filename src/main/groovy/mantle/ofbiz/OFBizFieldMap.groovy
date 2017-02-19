@@ -44,6 +44,13 @@ class OFBizFieldMap {
                 ELECTRONIC_ADDRESS:'CmtElectronicAddress', EMAIL_ADDRESS:'CmtEmailAddress', IP_ADDRESS:'CmtIpAddress',
                 DOMAIN_NAME:'CmtDomainName', WEB_ADDRESS:'CmtWebAddress'],
 
+        // FinancialAccount
+        finAccountTypeId:[BANK_ACCOUNT:'BankAccount', CREDIT_CARD_ACCOUNT:'CreditCard', DEPOSIT_ACCOUNT:'DepositAccount',
+                EQUITY_LINE_ACCOUNT:'EquityLine', GIFTCERT_ACCOUNT:'GiftCertificate', INVESTMENT_ACCOUNT:'Investment',
+                LOAN_ACCOUNT:'LoanAccount', REPLENISH_ACCOUNT:'Replenish', STORE_CREDIT_ACCT:'CustomerCredit', SVCCRED_ACCOUNT:'ServiceCredit'],
+        finAccountStatusId:[FNACT_ACTIVE:'FaActive', FNACT_CANCELLED:'FaCancelled', FNACT_MANFROZEN:'FaManFrozen', FNACT_NEGPENDREPL:'FaNegPendRepl'],
+        finAccountTransTypeId:[ADJUSTMENT:'FattAdjustment', DEPOSIT:'FattDeposit', WITHDRAWAL:'FattWithdraw'],
+
         // Invoice
         invoiceTypeId:[COMMISSION_INVOICE:'InvoiceCommission', CUST_RTN_INVOICE:'InvoiceReturn', PAYROL_INVOICE:'InvoicePayroll',
                 PURCHASE_INVOICE:'InvoiceSales', PURC_RTN_INVOICE:'InvoiceReturn', PUR_INV_TEMPLATE:'InvoiceTemplate',

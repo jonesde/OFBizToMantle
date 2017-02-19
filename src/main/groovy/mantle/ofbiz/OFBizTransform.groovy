@@ -38,18 +38,19 @@ class OFBizTransform {
                     'ProductPrice', 'InventoryItem', 'PhysicalInventory',
                     'OrderItemShipGroup',
                     'Shipment', 'ShipmentBoxType',
-                    'Invoice'],
+                    'Invoice',
+                    'FinAccount'],
             ['PartyClassification', 'PartyRelationship', 'CreditCard',
                     'OrderRole', 'OrderContactMech', 'OrderItem',
                     'ShipmentItem', 'ShipmentPackage', 'ShipmentRouteSegment',
                     'InvoiceContactMech', 'InvoiceRole', 'InvoiceItem',
-                    'Payment'],
+                    'FinAccountTrans'],
             ['OrderAdjustment', 'OrderPaymentPreference', 'OrderItemShipGrpInvRes',
                     'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg', 'OrderShipment',
-                    'PaymentApplication'],
+                    'Payment'],
             ['InventoryItemDetail',
                     'OrderAdjustmentBilling', 'OrderItemBilling',
-                    'PaymentGatewayResponse']
+                    'PaymentApplication', 'PaymentGatewayResponse']
     ]
 
     // NOTE: for really large imports there may be memory constraint issues and this would need to a be a disk based cache
@@ -95,12 +96,40 @@ class OFBizTransform {
         }})
         conf.addTransformer("TelecomNumber", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             String cNum = val.contactNumber
-            if (!cNum) { et.loadCurrent(false); return }
-            cNum = cNum.trim()
-            if (!cNum.contains("-") && cNum.length() == 7) cNum = cNum.substring(0,3) + '-' + cNum.substring(3,7)
+            if (cNum) {
+                cNum = cNum.trim()
+                if (!cNum.contains("-") && cNum.length() == 7) cNum = cNum.substring(0,3) + '-' + cNum.substring(3,7)
+            }
             et.addEntry(new SimpleEntry("mantle.party.contact.TelecomNumber", [contactMechId:val.contactMechId,
                     countryCode:val.countryCode, areaCode:val.areaCode, contactNumber:cNum,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+
+        /* ========== FinAccount ========== */
+
+        conf.addTransformer("FinAccount", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.account.financial.FinancialAccount", [finAccountId:val.finAccountId,
+                    finAccountTypeId:map('finAccountTypeId', (String) val.finAccountTypeId),
+                    statusId:map('finAccountStatusId', (String) val.statusId), finAccountName:val.finAccountName,
+                    finAccountCode:val.finAccountCode, finAccountPin:val.finAccountPin, currencyUomId:val.currencyUomId,
+                    organizationPartyId:val.organizationPartyId, ownerPartyId:val.ownerPartyId, fromDate:val.fromDate,
+                    thruDate:val.thruDate, isRefundable:val.isRefundable, replenishPaymentId:val.replenishPaymentId,
+                    replenishLevel:val.replenishLevel, actualBalance:val.actualBalance, availableBalance:val.availableBalance,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp)?.take(23)]))
+            // TODO postToGlAccountId once GlAccount mapped
+        }})
+        conf.addTransformer("FinAccountTrans", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            if (val.paymentId) {
+                // create a dummy Payment since that and FinancialAccountTrans refer to each other so no clean load order, but this avoids having to create dummy records lower down
+                et.addEntry(new SimpleEntry("mantle.account.payment.Payment", [paymentId:val.paymentId]))
+            }
+            et.addEntry(new SimpleEntry("mantle.account.financial.FinancialAccountTrans", [finAccountTransId:val.finAccountTransId,
+                    finAccountId:val.finAccountId, fromPartyId:val.partyId, transactionDate:val.transactionDate, entryDate:val.entryDate,
+                    finAccountTransTypeEnumId:map('finAccountTransTypeId', (String) val.finAccountTransTypeId),
+                    amount:val.amount, paymentId:val.paymentId, orderId:val.orderId, orderItemSeqId:val.orderItemSeqId,
+                    comments:val.comments, lastUpdatedStamp:((String) val.lastUpdatedTxStamp)?.take(23)]))
+            // NOTE: putting partyId in fromPartyId, could maybe be mapped to fromPartyId OR toPartyId depending on...?
+            // NOTE: reasonEnumId not yet mapped, not used as much in OFBiz as in Mantle
         }})
 
         /* ========== Inventory ========== */
@@ -394,16 +423,16 @@ class OFBizTransform {
         /* ========== Payment ========== */
 
         conf.addTransformer("Payment", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // load after FinAccountTrans, both depend on the other but Payment is mutable and FinancialAccountTrans in Mantle is not (create only)
             et.addEntry(new SimpleEntry("mantle.account.payment.Payment", [paymentId:val.paymentId,
                     paymentTypeEnumId:map('paymentTypeId', (String) val.paymentTypeId), fromPartyId:val.partyIdFrom, toPartyId:val.partyIdTo,
                     paymentInstrumentEnumId:map('paymentInstrumentEnumId', (String) val.paymentMethodTypeId),
                     paymentMethodId:val.paymentMethodId, statusId:map('paymentStatusId', (String) val.statusId),
                     effectiveDate:val.effectiveDate, amount:val.amount, amountUomId:val.currencyUomId,
-                    paymentRefNum:val.paymentRefNum, comments:val.comments,
+                    paymentRefNum:val.paymentRefNum, comments:val.comments, finAccountTransId:val.finAccountTransId,
                     /*overrideGlAccountId:val.overrideGlAccountId,*/ originalCurrencyAmount:val.actualCurrencyAmount,
                     originalCurrencyUomId:val.actualCurrencyUomId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
-            // NOTE: doing nothing with paymentGatewayResponseId, paymentPreferenceId
-            // TODO: not setting as those aren't loaded yet: finAccountTransId:val.finAccountTransId,
+            // NOTE: doing nothing with paymentGatewayResponseId (only ref from PaymentGatewayResponse to Payment in Mantle), paymentPreferenceId
             // TODO: skipping overrideGlAccountId for now, needs GlAccount mapping
         }})
         conf.addTransformer("PaymentApplication", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues

@@ -37,7 +37,8 @@ class OFBizTransform {
                     'ProductPrice', 'InventoryItem', 'PhysicalInventory',
                     'Shipment', 'ShipmentBoxType',
                     'Invoice',
-                    'FinAccount'],
+                    'FinAccount',
+                    'GlJournal'],
             ['PartyClassification', 'PartyRelationship', 'CreditCard',
                     'OrderItemShipGroup', 'OrderHeaderNote',
                     'ShipmentItem', 'ShipmentPackage', 'ShipmentRouteSegment',
@@ -47,7 +48,8 @@ class OFBizTransform {
             ['OrderItem'],
             ['OrderAdjustment', 'OrderContactMech', 'OrderItemShipGrpInvRes', 'OrderPaymentPreference',
                     'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg', 'OrderShipment'],
-            ['PaymentApplication', 'PaymentGatewayResponse', 'InventoryItemDetail', 'OrderItemBilling', 'OrderAdjustmentBilling']
+            ['PaymentApplication', 'PaymentGatewayResponse', 'InventoryItemDetail', 'OrderItemBilling', 'OrderAdjustmentBilling'],
+            ['AcctgTrans'], ['AcctgTransEntry']
     ]
 
     // NOTE: for really large imports there may be memory constraint issues and this would need to a be a disk based cache
@@ -67,6 +69,54 @@ class OFBizTransform {
             if (!noteInfo || "NONE".equals(noteInfo)) { et.loadCurrent(false); return }
             if (noteInfo.length() > 4000) val.noteInfo = noteInfo.substring(0,4000)
             et.addEntry(new SimpleEntry("mantle.ofbiz.TemporaryNote", val))
+        }})
+
+        /* ========== AcctgTrans ========== */
+
+        /* not meant to be run, just a quick transformer to map GlAccount records that match by name as a first pass for GlAccount mappings
+        conf.addTransformer("GlAccount", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.loadCurrent(false)
+            List<EntityValue> glAccountList = Moqui.executionContext.entity.find("mantle.ledger.account.GlAccount")
+                    .condition("accountName", val.accountName).list()
+            StringBuilder outSb = new StringBuilder()
+            for (EntityValue glAccount in glAccountList) outSb.append("\n'${val.glAccountId}':'${glAccount.glAccountId}', // ${val.accountName}")
+            if (outSb.length() > 0) System.out.println(outSb.toString())
+        }})
+        */
+        conf.addTransformer("GlJournal", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.ledger.transaction.GlJournal", [glJournalId:val.glJournalId,
+                    glJournalName:val.glJournalName, organizationPartyId:val.organizationPartyId,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+        conf.addTransformer("AcctgTrans", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.addEntry(new SimpleEntry("mantle.ledger.transaction.AcctgTrans", [acctgTransId:val.acctgTransId,
+                    acctgTransTypeEnumId:map('acctgTransTypeId', (String) val.acctgTransTypeId), otherPartyId:val.partyId,
+                    organizationPartyId:'Company', // if there are multiple internal orgs with transactions remove this and uncomment code in AcctgTransEntry
+                    amountUomId:'USD', // change this for other currencies, if there are multiple currencies need to get from AcctgTransEntry like organizationPartyId
+                    description:val.description, transactionDate:val.transactionDate, isPosted:val.isPosted, postedDate:val.postedDate,
+                    scheduledPostingDate:val.scheduledPostingDate, voucherRef:val.voucherRef, voucherDate:val.voucherDate,
+                    assetId:val.inventoryItemId, physicalInventoryId:val.physicalInventoryId, invoiceId:val.invoiceId,
+                    paymentId:val.paymentId, finAccountTransId:val.finAccountTransId, shipmentId:val.shipmentId,
+                    assetReceiptId:val.receiptId, theirAcctgTransId:val.theirAcctgTransId, glJournalId:val.glJournalId,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // handle? not really used: glFiscalTypeId, groupStatusId
+            // NOTE: skipping because FixedAsset not yet transformed: fixedAssetId
+            // NOTE: skipping because WorkEffort not yet transformed: workEffortId
+            // NOTE: no organizationPartyId on AcctgTrans in OFBiz, get it from AcctgTransEntry record
+        }})
+        conf.addTransformer("AcctgTransEntry", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // always using 'Company' for organizationPartyId as an optimization, use this when there are multiple internal orgs with transactions:
+            // EntityValue acctgTrans = Moqui.executionContext.entity.find("mantle.ledger.transaction.AcctgTrans").condition("acctgTransId", val.acctgTransId).one()
+            // if (!acctgTrans.organizationPartyId) { acctgTrans.organizationPartyId = val.organizationPartyId; acctgTrans.update() }
+            et.addEntry(new SimpleEntry("mantle.ledger.transaction.AcctgTransEntry", [acctgTransId:val.acctgTransId,
+                    acctgTransEntrySeqId:val.acctgTransEntrySeqId, description:val.description, voucherRef:val.voucherRef,
+                    productId:val.productId, externalProductId:val.theirProductId, assetId:val.inventoryItemId,
+                    glAccountTypeEnumId:map('glAccountTypeId', (String) val.glAccountTypeId), dueDate:val.dueDate,
+                    // glAccountId:map('glAccountId', (String) val.glAccountId),
+                    amount:val.amount, debitCreditFlag:val.debitCreditFlag, originalCurrencyAmount:val.origAmount,
+                    isSummary:val.isSummary, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // not used in mantle: acctgTransEntryTypeId
+            // could map if all SettlementTerm records are in place, not generally used: settlementTermId
         }})
 
         /* ========== ContactMech ========== */

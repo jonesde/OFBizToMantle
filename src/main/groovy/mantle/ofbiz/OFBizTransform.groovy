@@ -73,16 +73,6 @@ class OFBizTransform {
 
         /* ========== AcctgTrans ========== */
 
-        /* not meant to be run, just a quick transformer to map GlAccount records that match by name as a first pass for GlAccount mappings
-        conf.addTransformer("GlAccount", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
-            et.loadCurrent(false)
-            List<EntityValue> glAccountList = Moqui.executionContext.entity.find("mantle.ledger.account.GlAccount")
-                    .condition("accountName", val.accountName).list()
-            StringBuilder outSb = new StringBuilder()
-            for (EntityValue glAccount in glAccountList) outSb.append("\n'${val.glAccountId}':'${glAccount.glAccountId}', // ${val.accountName}")
-            if (outSb.length() > 0) System.out.println(outSb.toString())
-        }})
-        */
         conf.addTransformer("GlJournal", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             et.addEntry(new SimpleEntry("mantle.ledger.transaction.GlJournal", [glJournalId:val.glJournalId,
                     glJournalName:val.glJournalName, organizationPartyId:val.organizationPartyId,

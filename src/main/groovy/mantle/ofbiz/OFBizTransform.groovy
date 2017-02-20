@@ -105,7 +105,7 @@ class OFBizTransform {
                     // glAccountId:map('glAccountId', (String) val.glAccountId),
                     amount:val.amount, debitCreditFlag:val.debitCreditFlag, originalCurrencyAmount:val.origAmount,
                     isSummary:val.isSummary, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
-            // not used in mantle: acctgTransEntryTypeId
+            // not used in mantle, not really in OFBiz either: acctgTransEntryTypeId
             // could map if all SettlementTerm records are in place, not generally used: settlementTermId
         }})
 

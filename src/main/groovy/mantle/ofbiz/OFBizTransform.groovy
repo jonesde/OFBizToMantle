@@ -83,19 +83,22 @@ class OFBizTransform {
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
         conf.addTransformer("AcctgTrans", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
-            // cleanup some invalid dates
-            Timestamp nowStamp = new Timestamp(System.currentTimeMillis())
+            // skip some invalid dates
             String transactionDate = val.transactionDate
+            String postedDate = val.postedDate
+            if (transactionDate?.startsWith("3") || postedDate?.startsWith("3")) {
+                Map<String, Object> skipCache = getMappingCache("AcctgTransSkip")
+                skipCache.put((String) val.acctgTransId, true)
+                et.loadCurrent(false)
+                return
+            }
+            // warn about future dates
+            Timestamp nowStamp = new Timestamp(System.currentTimeMillis())
             if (transactionDate) {
-                if (transactionDate.startsWith("3055")) transactionDate = "2015" + transactionDate.substring(4)
-                if (transactionDate.startsWith("3")) transactionDate = "2" + transactionDate.substring(1)
                 try { if (Timestamp.valueOf(transactionDate) > nowStamp) logger.warn("AcctgTrans ${val.acctgTransId} has future transactionDate ${transactionDate}") }
                 catch (Exception e) { logger.warn("Error checking AcctgTrans timestamps", e) }
             }
-            String postedDate = val.postedDate
             if (postedDate) {
-                if (postedDate.startsWith("3055")) postedDate = "2015" + postedDate.substring(4)
-                if (postedDate.startsWith("3")) postedDate = "2" + postedDate.substring(1)
                 try { if (Timestamp.valueOf(postedDate) > nowStamp) logger.warn("AcctgTrans ${val.acctgTransId} has future postedDate ${postedDate}") }
                 catch (Exception e) { logger.warn("Error checking AcctgTrans timestamps", e) }
             }
@@ -116,6 +119,9 @@ class OFBizTransform {
             // NOTE: no organizationPartyId on AcctgTrans in OFBiz, get it from AcctgTransEntry record
         }})
         conf.addTransformer("AcctgTransEntry", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            Map<String, Object> skipCache = getMappingCache("AcctgTransSkip")
+            if (skipCache.get(val.acctgTransId)) { et.loadCurrent(false); return }
+
             // always using 'Company' for organizationPartyId as an optimization, use this when there are multiple internal orgs with transactions:
             // EntityValue acctgTrans = Moqui.executionContext.entity.find("mantle.ledger.transaction.AcctgTrans").condition("acctgTransId", val.acctgTransId).one()
             // if (!acctgTrans.organizationPartyId) { acctgTrans.organizationPartyId = val.organizationPartyId; acctgTrans.update() }

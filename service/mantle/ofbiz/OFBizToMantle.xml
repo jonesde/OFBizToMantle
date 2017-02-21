@@ -40,6 +40,10 @@ along with this software (see the LICENSE.md file). If not, see
             long startTime = System.currentTimeMillis()
             EtlInfo etlInfo = new EtlInfo()
 
+            // pause the recalculate_GlAccountOrgSummaries job
+            ec.service.sync().name("update#moqui.service.job.ServiceJob")
+                    .parameters([jobName:"recalculate_GlAccountOrgSummaries", paused:"Y"]).requireNewTransaction(true).call()
+
             for (List<String> nameList in OFBizTransform.loadOrderParallel) {
                 logger.info("=== ETL Starting parallel set ${nameList}")
 
@@ -62,6 +66,10 @@ along with this software (see the LICENSE.md file). If not, see
                     break
                 }
             }
+
+            // resume the recalculate_GlAccountOrgSummaries job
+            ec.service.sync().name("update#moqui.service.job.ServiceJob")
+                    .parameters([jobName:"recalculate_GlAccountOrgSummaries", paused:"N"]).requireNewTransaction(true).call()
 
             OFBizTransform.clearMappingCaches()
             logger.info("=== ETL Finished Load of ${etlInfo.entityCount} entities in ${(System.currentTimeMillis() - startTime) / 1000}s (extracted: ${etlInfo.extractCount}, skipped: ${etlInfo.skipCount}, loaded: ${etlInfo.loadCount})")

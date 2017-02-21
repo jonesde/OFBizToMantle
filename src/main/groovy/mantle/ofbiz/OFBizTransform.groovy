@@ -23,6 +23,8 @@ import org.moqui.etl.SimpleEtl.Transformer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+import java.sql.Timestamp
+
 import static mantle.ofbiz.OFBizFieldMap.map
 
 @CompileStatic
@@ -81,11 +83,28 @@ class OFBizTransform {
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
         conf.addTransformer("AcctgTrans", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // cleanup some invalid dates
+            Timestamp nowStamp = new Timestamp(System.currentTimeMillis())
+            String transactionDate = val.transactionDate
+            if (transactionDate) {
+                if (transactionDate.startsWith("3055")) transactionDate = "2015" + transactionDate.substring(4)
+                if (transactionDate.startsWith("3")) transactionDate = "2" + transactionDate.substring(1)
+                try { if (Timestamp.valueOf(transactionDate) > nowStamp) logger.warn("AcctgTrans ${val.acctgTransId} has future transactionDate ${transactionDate}") }
+                catch (Exception e) { logger.warn("Error checking AcctgTrans timestamps", e) }
+            }
+            String postedDate = val.postedDate
+            if (postedDate) {
+                if (postedDate.startsWith("3055")) postedDate = "2015" + postedDate.substring(4)
+                if (postedDate.startsWith("3")) postedDate = "2" + postedDate.substring(1)
+                try { if (Timestamp.valueOf(postedDate) > nowStamp) logger.warn("AcctgTrans ${val.acctgTransId} has future postedDate ${postedDate}") }
+                catch (Exception e) { logger.warn("Error checking AcctgTrans timestamps", e) }
+            }
+
             et.addEntry(new SimpleEntry("mantle.ledger.transaction.AcctgTrans", [acctgTransId:val.acctgTransId,
                     acctgTransTypeEnumId:map('acctgTransTypeId', (String) val.acctgTransTypeId), otherPartyId:val.partyId,
                     organizationPartyId:'Company', // if there are multiple internal orgs with transactions remove this and uncomment code in AcctgTransEntry
                     amountUomId:'USD', // change this for other currencies, if there are multiple currencies need to get from AcctgTransEntry like organizationPartyId
-                    description:val.description, transactionDate:val.transactionDate, isPosted:val.isPosted, postedDate:val.postedDate,
+                    description:val.description, transactionDate:transactionDate, isPosted:val.isPosted, postedDate:postedDate,
                     scheduledPostingDate:val.scheduledPostingDate, voucherRef:val.voucherRef, voucherDate:val.voucherDate,
                     assetId:val.inventoryItemId, physicalInventoryId:val.physicalInventoryId, invoiceId:val.invoiceId,
                     paymentId:val.paymentId, finAccountTransId:val.finAccountTransId, shipmentId:val.shipmentId,

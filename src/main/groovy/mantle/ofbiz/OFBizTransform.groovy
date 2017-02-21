@@ -48,8 +48,10 @@ class OFBizTransform {
             ['OrderItem'],
             ['OrderAdjustment', 'OrderContactMech', 'OrderItemShipGrpInvRes', 'OrderPaymentPreference',
                     'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg', 'OrderShipment'],
-            ['PaymentApplication', 'PaymentGatewayResponse', 'InventoryItemDetail', 'OrderItemBilling', 'OrderAdjustmentBilling'],
-            ['AcctgTrans'], ['AcctgTransEntry']
+            ['PaymentApplication', 'PaymentGatewayResponse',
+                    'InventoryItemDetail', 'OrderItemBilling', 'OrderAdjustmentBilling',
+                    'AcctgTrans'],
+            ['AcctgTransEntry']
     ]
 
     // NOTE: for really large imports there may be memory constraint issues and this would need to a be a disk based cache
@@ -102,7 +104,7 @@ class OFBizTransform {
                     acctgTransEntrySeqId:val.acctgTransEntrySeqId, description:val.description, voucherRef:val.voucherRef,
                     productId:val.productId, externalProductId:val.theirProductId, assetId:val.inventoryItemId,
                     glAccountTypeEnumId:map('glAccountTypeId', (String) val.glAccountTypeId), dueDate:val.dueDate,
-                    // glAccountId:map('glAccountId', (String) val.glAccountId),
+                    glAccountId:map('glAccountId', (String) val.glAccountId),
                     amount:val.amount, debitCreditFlag:val.debitCreditFlag, originalCurrencyAmount:val.origAmount,
                     isSummary:val.isSummary, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
             // not used in mantle, not really in OFBiz either: acctgTransEntryTypeId
@@ -160,8 +162,8 @@ class OFBizTransform {
                     organizationPartyId:val.organizationPartyId, ownerPartyId:val.ownerPartyId, fromDate:val.fromDate,
                     thruDate:val.thruDate, isRefundable:val.isRefundable, replenishPaymentId:val.replenishPaymentId,
                     replenishLevel:val.replenishLevel, actualBalance:val.actualBalance, availableBalance:val.availableBalance,
+                    postToGlAccountId:map('glAccountId', (String) val.postToGlAccountId),
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp)?.take(23)]))
-            // TODO postToGlAccountId once GlAccount mapped
         }})
         conf.addTransformer("FinAccountTrans", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             if (val.paymentId) {
@@ -278,8 +280,8 @@ class OFBizTransform {
                     invoiceItemSeqId:val.invoiceItemSeqId, itemTypeEnumId:map('invoiceItemTypeId', (String) val.invoiceItemTypeId),
                     assetId:val.inventoryItemId, productId:val.productId, taxableFlag:val.taxableFlag, quantity:val.quantity,
                     quantityUomId:val.uomId, amount:val.amount, description:val.description,
+                    overrideGlAccountId:map('glAccountId', (String) val.overrideGlAccountId),
                     salesOpportunityId:val.salesOpportunityId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
-            // TODO: overrideGlAccountId when glAccount mapping done
             // NOTE: could look up taxAuthorityId by taxAuthGeoId and taxAuthPartyId
             // NOTE: skipping, not generally needed and avoids fk error: parentInvoiceId:val.parentInvoiceId, parentInvoiceItemSeqId:val.parentInvoiceItemSeqId
         }})
@@ -354,8 +356,8 @@ class OFBizTransform {
                     unitAmount:val.unitPrice, unitListPrice:val.unitListPrice, isModifiedPrice:val.isModifiedPrice,
                     externalItemSeqId:val.externalId, fromAssetId:val.fromInventoryItemId, isPromo:val.isPromo,
                     subscriptionId:val.subscriptionId, salesOpportunityId:val.salesOpportunityId,
+                    overrideGlAccountId:map('glAccountId', (String) val.overrideGlAccountId),
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
-            // TODO: overrideGlAccountId when glAccount mapping done
         }})
         // NOTE: nothing for OrderItemShipGroupAssoc, doing single part orders only
         conf.addTransformer("OrderAdjustment", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
@@ -368,8 +370,8 @@ class OFBizTransform {
                     productFeatureId:val.productFeatureId, sourceReferenceId:val.sourceReferenceId, sourcePercentage:val.sourcePercentage,
                     customerReferenceId:val.customerReferenceId, exemptAmount:val.exemptAmount,
                     isPromo:(val.orderAdjustmentTypeId == 'PROMOTION_ADJUSTMENT' ? 'Y' : 'N'), isModifiedPrice:val.isManual,
+                    overrideGlAccountId:map('glAccountId', (String) val.overrideGlAccountId),
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
-            // TODO: overrideGlAccountId when glAccount mapping done
             // NOTE: doesn't map to TaxAuthority.taxAuthorityId, could look up by taxAuthGeoId, taxAuthPartyId
         }})
         conf.addTransformer("OrderPaymentPreference", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
@@ -491,17 +493,17 @@ class OFBizTransform {
                     paymentMethodId:val.paymentMethodId, statusId:map('paymentStatusId', (String) val.statusId),
                     effectiveDate:val.effectiveDate, amount:val.amount, amountUomId:val.currencyUomId,
                     paymentRefNum:val.paymentRefNum, comments:val.comments, finAccountTransId:val.finAccountTransId,
-                    /*overrideGlAccountId:val.overrideGlAccountId,*/ originalCurrencyAmount:val.actualCurrencyAmount,
-                    originalCurrencyUomId:val.actualCurrencyUomId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+                    overrideGlAccountId:map('glAccountId', (String) val.overrideGlAccountId),
+                    originalCurrencyAmount:val.actualCurrencyAmount, originalCurrencyUomId:val.actualCurrencyUomId,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
             // NOTE: doing nothing with paymentGatewayResponseId (only ref from PaymentGatewayResponse to Payment in Mantle), paymentPreferenceId
-            // TODO: skipping overrideGlAccountId for now, needs GlAccount mapping
         }})
         conf.addTransformer("PaymentApplication", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             et.addEntry(new SimpleEntry("mantle.account.payment.PaymentApplication", [paymentApplicationId:val.paymentApplicationId,
                     paymentId:val.paymentId, invoiceId:val.invoiceId, invoiceItemSeqId:val.invoiceItemSeqId,
                     billingAccountId:val.billingAccountId, toPaymentId:val.toPaymentId, taxAuthGeoId:val.taxAuthGeoId,
+                    overrideGlAccountId:map('glAccountId', (String) val.overrideGlAccountId),
                     amountApplied:val.amountApplied, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
-            // TODO: skipping overrideGlAccountId for now, needs GlAccount mapping
         }})
         conf.addTransformer("PaymentGatewayResponse", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // after Payment and OrderPaymentPreference
@@ -515,7 +517,6 @@ class OFBizTransform {
                     reasonMessage:val.gatewayMessage, transactionDate:val.transactionDate, resultDeclined:val.resultDeclined,
                     resultNsf:val.resultNsf, resultBadExpire:val.resultBadExpire, resultBadCardNumber:val.resultBadCardNumber,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
-            // TODO: skipping overrideGlAccountId for now, needs GlAccount mapping
         }})
 
         /* ========== PaymentMethod ========== */
@@ -524,8 +525,8 @@ class OFBizTransform {
             et.addEntry(new SimpleEntry("mantle.account.method.PaymentMethod", [paymentMethodId:val.paymentMethodId,
                     paymentMethodTypeEnumId:map('paymentMethodTypeEnumId', (String) val.paymentMethodTypeId),
                     ownerPartyId:val.partyId, description:val.description, fromDate:val.fromDate, thruDate:val.thruDate,
+                    overrideGlAccountId:map('glAccountId', (String) val.glAccountId),
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
-            // TODO: skipping glAccountId for now, needs GlAccount mapping
             // NOTE: skipping finAccountId for now, needs FinAccount transformer
         }})
         conf.addTransformer("CreditCard", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues

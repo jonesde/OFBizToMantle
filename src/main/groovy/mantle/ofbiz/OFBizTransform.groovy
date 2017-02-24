@@ -167,13 +167,24 @@ class OFBizTransform {
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)] as Map<String, Object>)))
         }})
         conf.addTransformer("TelecomNumber", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            String countryCode = val.countryCode
+            String areaCode = val.areaCode
             String cNum = val.contactNumber
             if (cNum) {
                 cNum = cNum.trim()
-                if (!cNum.contains("-") && cNum.length() == 7) cNum = cNum.substring(0,3) + '-' + cNum.substring(3,7)
+                int cNumLen = cNum.length()
+                // normalize 7 digit with dash after 3 digits (USA format)
+                if (cNumLen == 7 && !cNum.contains("-")) cNum = cNum.substring(0,3) + '-' + cNum.substring(3,7)
+                // check for USA numbers with area code in countryCode
+                if (cNumLen == 4 && countryCode != null && countryCode.length() == 3) {
+                    cNum = areaCode + '-' + cNum
+                    areaCode = countryCode
+                    countryCode = "1"
+                }
+                if (!countryCode) countryCode = "1"
             }
             et.addEntry(new SimpleEntry("mantle.party.contact.TelecomNumber", [contactMechId:val.contactMechId,
-                    countryCode:val.countryCode, areaCode:val.areaCode, contactNumber:cNum,
+                    countryCode:countryCode, areaCode:areaCode, contactNumber:cNum,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
 

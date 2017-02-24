@@ -174,7 +174,13 @@ class OFBizTransform {
                 cNum = cNum.trim()
                 int cNumLen = cNum.length()
                 // normalize 7 digit with dash after 3 digits (USA format)
-                if (cNumLen == 7 && !cNum.contains("-")) cNum = cNum.substring(0,3) + '-' + cNum.substring(3,7)
+                if (cNumLen == 7 && !cNum.contains("-")) cNum = cNum.substring(0,3) + '-' + cNum.substring(3)
+                // look for 10 digits in contact number and if found split out area code (USA format)
+                if (cNumLen >= 10 && !areaCode) {
+                    cNum = cNum.replaceAll("-", "")
+                    areaCode = cNum.substring(0,3)
+                    cNum = cNum.substring(3,6) + '-' + cNum.substring(6)
+                }
                 // check for USA numbers with area code in countryCode
                 if (cNumLen == 4 && countryCode != null && countryCode.length() == 3) {
                     cNum = areaCode + '-' + cNum

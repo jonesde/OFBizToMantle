@@ -162,35 +162,48 @@ class OFBizTransform {
                 if (stateProvinceGeoId in ['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT']) stateProvinceGeoId = 'CAN_' + stateProvinceGeoId
                 else stateProvinceGeoId = 'USA_' + stateProvinceGeoId
             }
-            et.addEntry(new SimpleEntry("mantle.party.contact.PostalAddress", entryMap + ([stateProvinceGeoId:stateProvinceGeoId,
+            String postalCode = val.postalCode
+            if (postalCode) postalCode = postalCode.replaceAll(/\W/, "").toUpperCase()
+            String postalCodeExt = val.postalCodeExt
+            if (postalCodeExt) postalCodeExt = postalCodeExt.replaceAll(/\W/, "").toUpperCase()
+            et.addEntry(new SimpleEntry("mantle.party.contact.PostalAddress", entryMap + ([
+                    stateProvinceGeoId:stateProvinceGeoId, postalCode:postalCode, postalCodeExt:postalCodeExt,
                     unitNumber:((String) val.houseNumber + (val.houseNumberExt ? '-' + (String) val.houseNumberExt : '')),
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)] as Map<String, Object>)))
         }})
         conf.addTransformer("TelecomNumber", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             String countryCode = val.countryCode
             String areaCode = val.areaCode
-            String cNum = val.contactNumber
-            if (cNum) {
-                cNum = cNum.trim()
-                int cNumLen = cNum.length()
-                // normalize 7 digit with dash after 3 digits (USA format)
-                if (cNumLen == 7 && !cNum.contains("-")) cNum = cNum.substring(0,3) + '-' + cNum.substring(3)
-                // look for 10 digits in contact number and if found split out area code (USA format)
-                if (cNumLen >= 10 && !areaCode) {
-                    cNum = cNum.replaceAll("-", "")
-                    areaCode = cNum.substring(0,3)
-                    cNum = cNum.substring(3,6) + '-' + cNum.substring(6)
+            String contactNumber = val.contactNumber
+            if (countryCode) countryCode = countryCode.replaceAll(/\D/, "")
+            if (areaCode) areaCode = areaCode.replaceAll(/\D/, "")
+
+            int countryLength = countryCode != null ? countryCode.length() : 0
+            // this isn't the best definition of an international country code, meant to handle bad data where the USA areaCode is in the countryCode field
+            boolean isIntl = countryLength > 0 && (countryCode.length() < 3 || countryCode.startsWith("0")) && !"1".equals(countryCode) && !"11".equals(countryCode)
+            if (isIntl) {
+                logger.info("Found international number, not cleaning: [${countryCode}] [${areaCode}] [${contactNumber}]")
+            } else {
+                // TODO: if you are not using USA (or similar 3,3,4) numbers only change or disable this!
+                String fullNum = ""
+                if (countryCode && !"1".equals(countryCode)) { fullNum += countryCode; countryCode = "1" }
+                if (areaCode) fullNum += areaCode
+                if (contactNumber) contactNumber = contactNumber.replaceAll(/\D/, "")
+                if (contactNumber) fullNum += contactNumber
+                if (fullNum) {
+                    int fullNumLen = fullNum.length()
+                    if (fullNumLen <= 7) {
+                        areaCode = null
+                        contactNumber = fullNumLen > 3 ? fullNum.substring(0,3) + '-' + fullNum.substring(3) : fullNum
+                    } else {
+                        areaCode = fullNum.substring(0,3)
+                        contactNumber = fullNum.substring(3,6) + '-' + fullNum.substring(6)
+                    }
+                    if (!countryCode) countryCode = "1"
                 }
-                // check for USA numbers with area code in countryCode
-                if (cNumLen == 4 && countryCode != null && countryCode.length() == 3) {
-                    cNum = areaCode + '-' + cNum
-                    areaCode = countryCode
-                    countryCode = "1"
-                }
-                if (!countryCode) countryCode = "1"
             }
             et.addEntry(new SimpleEntry("mantle.party.contact.TelecomNumber", [contactMechId:val.contactMechId,
-                    countryCode:countryCode, areaCode:areaCode, contactNumber:cNum,
+                    countryCode:countryCode, areaCode:areaCode, contactNumber:contactNumber,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
 

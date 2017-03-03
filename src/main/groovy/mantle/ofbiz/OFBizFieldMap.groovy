@@ -102,10 +102,11 @@ class OFBizFieldMap {
         shipmentMethodTypeId:[AIR:'ShMthNextDay', GROUND:'ShMthGround', NO_SHIPPING:null, STANDARD:'ShMthGround', 'USPS-CAN':'ShMthGround', 'USPS Free':'ShMthGround'],
         orderItemTypeId:[ASSET_ORDER_ITEM:'ItemAsset', BULK_ORDER_ITEM:'ItemInventory', INVENTORY_ORDER_ITEM:'ItemInventory',
                 PRODUCT_ORDER_ITEM:'ItemProduct', PURCHASE_SPECIFIC:'ItemInventory', RENTAL_ORDER_ITEM:'ItemRental',
-                SUPPLIES_ORDER_ITEM:'ItemExpOfficeSup', WORK_ORDER_ITEM:'ItemWorkEffort'],
+                SUPPLIES_ORDER_ITEM:'ItemExpOfficeSup', WORK_ORDER_ITEM:'ItemWorkEffort', ORD_SHRINKAGE_ADJ:'ItemShrinkage'],
         orderAdjustmentTypeId:[ADDITIONAL_FEATURE:'ItemAddtlFeature', DISCOUNT_ADJUSTMENT:'ItemDiscount', FEE:'ItemFee',
                 MISCELLANEOUS_CHARGE:'ItemMiscCharge', PROMOTION_ADJUSTMENT:'ItemDiscount', REPLACE_ADJUSTMENT:'ItemReplacement',
-                SALES_TAX:'ItemSalesTax', SHIPPING_CHARGES:'ItemShipping'],
+                SALES_TAX:'ItemSalesTax', SHIPPING_CHARGES:'ItemShipping', ORD_SHRINKAGE_ADJ:'ItemShrinkage',
+                ORD_CHARGEBACK_ADJ:'ItemChargebackAdjust', ORD_COMPLIANCE_ADJ:'ItemComplianceFee'],
 
         // Party
         partyTypeId:[PERSON:'PtyPerson', PARTY_GROUP:'PtyOrganization'],

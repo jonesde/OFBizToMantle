@@ -260,15 +260,22 @@ class OFBizTransform {
         conf.addTransformer("InventoryItemDetail", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // needs: Asset, Shipment, Return, AssetIssuance, AssetReceipt, PhysicalInventory
             String productId = Moqui.executionContext.entity.find("mantle.product.asset.Asset").condition("assetId", val.inventoryItemId).one()?.productId
+            // make sure shipment exists, shouldn't happen but an issue in one production data set, comment this if not needed:
+            String shipmentId = val.shipmentId
+            if (Moqui.executionContext.entity.find("mantle.shipment.Shipment").condition("shipmentId", shipmentId).one() == null) {
+                logger.warn("For InventoryItem ${val.inventoryItemId} Detail ${val.inventoryItemDetailSeqId} Shipment ${shipmentId} does not exist, not setting")
+                shipmentId = null
+            }
             et.addEntry(new SimpleEntry("mantle.product.asset.AssetDetail", [
-                    assetDetailId:((String) val.inventoryItemId) + ((String) val.inventoryItemDetailSeqId),
+                    assetDetailId:((String) val.inventoryItemId) + '_' + ((String) val.inventoryItemDetailSeqId),
                     assetId:val.inventoryItemId, productId:productId, effectiveDate:val.effectiveDate, unitCost:val.unitCost,
                     quantityOnHandDiff:val.quantityOnHandDiff, availableToPromiseDiff:val.availableToPromiseDiff,
-                    shipmentId:val.shipmentId, returnId:val.returnId, returnItemSeqId:val.returnItemSeqId,
-                    assetIssuanceId:val.itemIssuanceId, assetReceiptId:val.receiptId, physicalInventoryId:val.physicalInventoryId,
-                    varianceReasonEnumId:map('varianceReasonEnumId', (String) val.reasonEnumId), description:val.description,
+                    shipmentId:shipmentId, assetIssuanceId:val.itemIssuanceId, assetReceiptId:val.receiptId,
+                    physicalInventoryId:val.physicalInventoryId, description:val.description,
+                    varianceReasonEnumId:map('varianceReasonEnumId', (String) val.reasonEnumId),
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
             // NOTE: workEffortId not yet handled, need to also transform WorkEffort for this
+            // NOTE: Return not yet handled: returnId:val.returnId, returnItemSeqId:val.returnItemSeqId,
         }})
 
         conf.addTransformer("PhysicalInventory", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues

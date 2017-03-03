@@ -86,7 +86,9 @@ along with this software (see the LICENSE.md file). If not, see
 
             Thread startEtl(String entityName, ResourceReference fileRef, EtlInfo etlInfo) {
                 SimpleEtl.Extractor extractor = new FlatXmlExtractor(fileRef)
-                SimpleEtl.Loader loader = ec.entity.makeEtlLoader().useTryInsert() // .dummyFks()
+                SimpleEtl.Loader loader = ec.entity.makeEtlLoader()
+                // this can speed things up but in some databases (Postgres...) any error sets tx rollback only so doesn't work: .useTryInsert()
+                // load should work fine without this, ie migration designed to avoid needing it: .dummyFks()
                 SimpleEtl etl = new SimpleEtl(extractor, loader).setConfiguration(OFBizTransform.conf).stopOnError()
 
                 ExecutionContextImpl.ThreadPoolRunnable runnable = new ExecutionContextImpl.ThreadPoolRunnable((ExecutionContextFactoryImpl) ec.factory, {

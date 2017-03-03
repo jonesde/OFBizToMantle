@@ -121,13 +121,18 @@ class OFBizTransform {
         conf.addTransformer("AcctgTransEntry", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             Map<String, Object> skipCache = getMappingCache("AcctgTransSkip")
             if (skipCache.get(val.acctgTransId)) { et.loadCurrent(false); return }
-
+            // make sure shipment exists, shouldn't happen but an issue in one production data set, comment this if not needed:
+            String productId = val.productId
+            if (productId && Moqui.executionContext.entity.find("mantle.product.Product").condition("productId", productId).one() == null) {
+                logger.warn("For AcctgTrans ${val.acctgTransId} Entry ${val.acctgTransEntrySeqId} Product ${productId} does not exist, not setting")
+                productId = null
+            }
             // always using 'Company' for organizationPartyId as an optimization, use this when there are multiple internal orgs with transactions:
             // EntityValue acctgTrans = Moqui.executionContext.entity.find("mantle.ledger.transaction.AcctgTrans").condition("acctgTransId", val.acctgTransId).one()
             // if (!acctgTrans.organizationPartyId) { acctgTrans.organizationPartyId = val.organizationPartyId; acctgTrans.update() }
             et.addEntry(new SimpleEntry("mantle.ledger.transaction.AcctgTransEntry", [acctgTransId:val.acctgTransId,
                     acctgTransEntrySeqId:val.acctgTransEntrySeqId, description:val.description, voucherRef:val.voucherRef,
-                    productId:val.productId, externalProductId:val.theirProductId, assetId:val.inventoryItemId,
+                    productId:productId, externalProductId:val.theirProductId, assetId:val.inventoryItemId,
                     glAccountTypeEnumId:map('glAccountTypeId', (String) val.glAccountTypeId), dueDate:val.dueDate,
                     glAccountId:map('glAccountId', (String) val.glAccountId),
                     amount:val.amount, debitCreditFlag:val.debitCreditFlag, originalCurrencyAmount:val.origAmount,
@@ -262,7 +267,7 @@ class OFBizTransform {
             String productId = Moqui.executionContext.entity.find("mantle.product.asset.Asset").condition("assetId", val.inventoryItemId).one()?.productId
             // make sure shipment exists, shouldn't happen but an issue in one production data set, comment this if not needed:
             String shipmentId = val.shipmentId
-            if (Moqui.executionContext.entity.find("mantle.shipment.Shipment").condition("shipmentId", shipmentId).one() == null) {
+            if (shipmentId && Moqui.executionContext.entity.find("mantle.shipment.Shipment").condition("shipmentId", shipmentId).one() == null) {
                 logger.warn("For InventoryItem ${val.inventoryItemId} Detail ${val.inventoryItemDetailSeqId} Shipment ${shipmentId} does not exist, not setting")
                 shipmentId = null
             }

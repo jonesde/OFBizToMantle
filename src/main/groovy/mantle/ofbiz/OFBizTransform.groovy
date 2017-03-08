@@ -533,21 +533,36 @@ class OFBizTransform {
             Map<String, Object> val = et.entry.etlValues
             String currentPassword = (String) val.currentPassword
             String passwordHashType = null
+            String passwordSalt = null
+            String passwordBase64 = 'N'
             if (currentPassword != null) {
-                int hashEnd = -1
-                if (currentPassword.startsWith('$')) hashEnd = currentPassword.indexOf('$', 1)
-                else if (currentPassword.startsWith('{')) hashEnd = currentPassword.indexOf('}', 1)
-                if (hashEnd > 0) {
-                    passwordHashType = currentPassword.substring(1, hashEnd)
-                    currentPassword = currentPassword.substring(hashEnd + 1)
+                // for password syntax and other nuances see org.ofbiz.base.crypto.HashCrypt
+                int hashTypeEnd = -1
+                int saltEnd = -1
+                if (currentPassword.startsWith('$')) {
+                    hashTypeEnd = currentPassword.indexOf('$', 1)
+                    saltEnd = currentPassword.indexOf('$', hashTypeEnd + 1)
+                } else if (currentPassword.startsWith('{')) {
+                    hashTypeEnd = currentPassword.indexOf('}', 1)
+                }
+                if (hashTypeEnd > 0) {
+                    passwordHashType = currentPassword.substring(1, hashTypeEnd)
+                    if (saltEnd > 0) {
+                        // if saltEnd is > 0 we have an OFBiz posix style password so is Base64 encoded
+                        passwordBase64 = 'Y'
+                        passwordSalt = currentPassword.substring(hashTypeEnd + 1, saltEnd)
+                        currentPassword = currentPassword.substring(saltEnd + 1)
+                    } else {
+                        currentPassword = currentPassword.substring(hashTypeEnd + 1)
+                    }
                 }
             }
             et.addEntry(new SimpleEntry("moqui.security.UserAccount", [userId:val.userLoginId, username:val.userLoginId,
                 partyId:val.partyId, passwordHint:val.passwordHint, requirePasswordChange:val.requirePasswordChange,
                 disabled:(val.enabled == 'N' ? 'Y' : 'N'), disabledDateTime:val.disabledDateTime, successiveFailedLogins:val.successiveFailedLogins,
                 currencyUomId:val.lastCurrencyUom, locale:val.lastLocale, timeZone:val.lastTimeZone,
-                currentPassword:currentPassword, passwordHashType:passwordHashType, passwordSetDate:((String) val.lastUpdatedTxStamp).take(23),
-                lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+                currentPassword:currentPassword, passwordSalt:passwordSalt, passwordHashType:passwordHashType, passwordBase64:passwordBase64,
+                passwordSetDate:((String) val.lastUpdatedTxStamp).take(23), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
 
         /* ========== Payment ========== */

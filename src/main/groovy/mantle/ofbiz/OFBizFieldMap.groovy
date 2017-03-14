@@ -144,7 +144,7 @@ class OFBizFieldMap {
         paymentInstrumentEnumId:[CASH:'PiCash', CERTIFIED_CHECK:'PiCertifiedCheck', COMPANY_ACCOUNT:'PiCompanyAccount',
                 COMPANY_CHECK:'PiCompanyCheck', CREDIT_CARD:'PiCreditCard', EFT_ACCOUNT:'PiAch', EXT_BILLACT:'PiBillingAccount',
                 EXT_COD:'PiCod', EXT_OFFLINE:'PiCash', EXT_PAYPAL:'PiPayPalAccount', FIN_ACCOUNT:'PiFinancialAccount', GIFT_CARD:'PiGiftCard',
-                GIFT_CERTIFICATE:'PiGiftCerificate', MONEY_ORDER:'PiMoneyOrder', PERSONAL_CHECK:'PiPersonalCheck',
+                GIFT_CERTIFICATE:'PiGiftCertificate', MONEY_ORDER:'PiMoneyOrder', PERSONAL_CHECK:'PiPersonalCheck',
                 PETTY_CASH:'PiCash', EXT_AMAZON:'PiCreditCard', EXT_AUTHORIZE_NET:'PiCreditCard', ADJUSTMENT:'PiOther'],
                 // EXT_EBAY, EXT_IDEAL, EXT_WORLDPAY
         paymentMethodTypeEnumId:[CERTIFIED_CHECK:'PmtBankAccount', COMPANY_CHECK:'PmtBankAccount', EFT_ACCOUNT:'PmtBankAccount',

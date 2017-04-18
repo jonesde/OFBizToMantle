@@ -242,7 +242,7 @@ class OFBizTransform {
         /* ========== Inventory ========== */
 
         conf.addTransformer("Lot", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
-            et.addEntry(new SimpleEntry("mantle.product.asset.Lot", [lotId:val.lotId, creationDate:val.creationDate,
+            et.addEntry(new SimpleEntry("mantle.product.asset.Lot", [lotId:val.lotId, creationDate:val.creationDate, lotNumber:val.lotId,
                     manufacturedDate:val.creationDate, quantity:val.quantity, expirationDate:((String) val.expirationDate)?.take(10),
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp)?.take(23)]))
         }})
@@ -250,6 +250,16 @@ class OFBizTransform {
             // some example key cleanup
             String locationSeqId = val.locationSeqId
             if (locationSeqId) { int spaceIdx = locationSeqId.indexOf(" "); if (spaceIdx > 0) locationSeqId = locationSeqId.substring(0, spaceIdx) }
+            if (val.lotId && val.partyId) {
+                // InventoryItem.partyId is used as supplier/manufacturer party, so set on Lot if there is one; should be an update as Lots already loaded
+                EntityValue lot = Moqui.executionContext.entity.find("mantle.product.asset.Lot").condition("lotId", val.lotId).one()
+                if (lot == null) {
+                    et.addEntry(new SimpleEntry("mantle.product.asset.Lot", [lotId:val.lotId, lotNumber:val.lotId, mfgPartyId:val.partyId]))
+                } else if (!lot.mfgPartyId) {
+                    lot.put("mfgPartyId", val.partyId)
+                    lot.update()
+                }
+            }
             et.addEntry(new SimpleEntry("mantle.product.asset.Asset", [assetId:val.inventoryItemId, productId:val.productId,
                     hasQuantity:(val.inventoryItemTypeId == 'SERIALIZED_INV_ITEM' ? 'N' : 'Y'), ownerPartyId:val.ownerPartyId,
                     facilityId:val.facilityId, locationSeqId:locationSeqId, statusId:map('inventoryStatusId', (String) val.statusId),
@@ -507,7 +517,8 @@ class OFBizTransform {
         conf.addTransformer("PartyRole", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             String roleTypeId = val.roleTypeId
             // handle _NA_ role which is a placeholder in OFBiz and never needed (should be eliminated) in Moqui
-            if ("_NA_".equals(roleTypeId)) { et.loadCurrent(false); return }
+            // NOTE: may want to remove the INTERNAL_ORGANIZATIO check here, avoid annoyance with demo data/etc of internal orgs, assume all desired setup already
+            if ("_NA_".equals(roleTypeId) || "INTERNAL_ORGANIZATIO".equals(roleTypeId)) { et.loadCurrent(false); return }
             String rtMapped = OFBizFieldMap.get('roleTypeId', roleTypeId)
             if (rtMapped == null) {
                 if (Moqui.executionContext.entity.find("mantle.party.RoleType").condition("roleTypeId", roleTypeId).useCache(true).one() == null) {

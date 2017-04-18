@@ -69,11 +69,16 @@ along with this software (see the LICENSE.md file). If not, see
                 }
             }
 
+            // clear ServiceJobRun records for recalculate_GlAccountOrgSummaries so it starts from beginning of time
+            ec.entity.find("moqui.service.job.ServiceJobRun").condition("jobName", "recalculate_GlAccountOrgSummaries").deleteAll()
             // resume the recalculate_GlAccountOrgSummaries and check_AllPartyDuplicates jobs
             ec.service.sync().name("update#moqui.service.job.ServiceJob")
                     .parameters([jobName:"recalculate_GlAccountOrgSummaries", paused:"N"]).requireNewTransaction(true).call()
             ec.service.sync().name("update#moqui.service.job.ServiceJob")
                     .parameters([jobName:"check_AllPartyDuplicates", paused:"N"]).requireNewTransaction(true).call()
+
+            // check for Finalized/Sent invoices with unpaid amount of 0 and set to Payment Sent
+            ec.service.async().name("mantle.account.InvoiceServices.check#InvoicesPaid").call()
 
             OFBizTransform.clearMappingCaches()
             logger.info("=== ETL Finished Load of ${etlInfo.entityCount} entities in ${(System.currentTimeMillis() - startTime) / 1000}s (extracted: ${etlInfo.extractCount}, skipped: ${etlInfo.skipCount}, loaded: ${etlInfo.loadCount})")

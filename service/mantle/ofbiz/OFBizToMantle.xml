@@ -69,16 +69,21 @@ along with this software (see the LICENSE.md file). If not, see
                 }
             }
 
-            // clear ServiceJobRun records for recalculate_GlAccountOrgSummaries so it starts from beginning of time
-            ec.entity.find("moqui.service.job.ServiceJobRun").condition("jobName", "recalculate_GlAccountOrgSummaries").deleteAll()
+            // run recalculate_GlAccountOrgSummaries job's service so it starts from beginning of time
+            ec.service.async().name("mantle.ledger.LedgerServices.recalculate#GlAccountOrgSummaries").parameter("organizationPartyId", "Company").call()
+
+            // check for Finalized/Sent invoices with unpaid amount of 0 and set to Payment Sent
+            ec.service.sync().name("mantle.account.InvoiceServices.check#InvoicesPaid").call()
+            // EECAs aren't run to calc invoice totals
+            ec.service.async().name("mantle.account.InvoiceServices.calculate#MissingInvoiceTotals").call()
+            // run indexes that would be run by data feed (but not enabled)
+            ec.service.job("IndexDataFeedDocuments").parameter("dataFeedId", "PopCommerceSearch").run()
+
             // resume the recalculate_GlAccountOrgSummaries and check_AllPartyDuplicates jobs
             ec.service.sync().name("update#moqui.service.job.ServiceJob")
                     .parameters([jobName:"recalculate_GlAccountOrgSummaries", paused:"N"]).requireNewTransaction(true).call()
             ec.service.sync().name("update#moqui.service.job.ServiceJob")
                     .parameters([jobName:"check_AllPartyDuplicates", paused:"N"]).requireNewTransaction(true).call()
-
-            // check for Finalized/Sent invoices with unpaid amount of 0 and set to Payment Sent
-            ec.service.async().name("mantle.account.InvoiceServices.check#InvoicesPaid").call()
 
             OFBizTransform.clearMappingCaches()
             logger.info("=== ETL Finished Load of ${etlInfo.entityCount} entities in ${(System.currentTimeMillis() - startTime) / 1000}s (extracted: ${etlInfo.extractCount}, skipped: ${etlInfo.skipCount}, loaded: ${etlInfo.loadCount})")
@@ -98,7 +103,8 @@ along with this software (see the LICENSE.md file). If not, see
 
                 ExecutionContextImpl.ThreadPoolRunnable runnable = new ExecutionContextImpl.ThreadPoolRunnable((ExecutionContextFactoryImpl) ec.factory, {
                     ArtifactExecutionFacadeImpl ae = (ArtifactExecutionFacadeImpl) Moqui.executionContext.getArtifactExecution()
-                    ae.disableAuthz(); ae.disableEntityEca(); ae.disableEntityDataFeed()
+                    Moqui.executionContext.getUser().loginAnonymousIfNoUser()
+                    ae.disableAuthz(); ae.disableEntityDataFeed(); ae.disableEntityEca()
 
                     etl.process()
                     if (etl.hasError()) {

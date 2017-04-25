@@ -260,10 +260,8 @@ class OFBizTransform {
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp)?.take(23)]))
         }})
         conf.addTransformer("InventoryItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
-            if (val.productId) {
-                EntityValue product = Moqui.executionContext.entity.find("mantle.product.Product").condition("productId", val.productId).one()
-                if (product == null) { logger.warn("Skipping InventoryItem ${val.inventoryItemId}, product referenced ${val.productId} does not exist"); et.loadCurrent(false); return }
-            }
+            EntityValue product = Moqui.executionContext.entity.find("mantle.product.Product").condition("productId", val.productId).one()
+            if (product == null) { logger.warn("Skipping InventoryItem ${val.inventoryItemId}, product referenced ${val.productId} does not exist"); et.loadCurrent(false); return }
             // some example key cleanup
             String locationSeqId = val.locationSeqId
             if (locationSeqId) { int spaceIdx = locationSeqId.indexOf(" "); if (spaceIdx > 0) locationSeqId = locationSeqId.substring(0, spaceIdx) }
@@ -278,6 +276,7 @@ class OFBizTransform {
                 }
             }
             et.addEntry(new SimpleEntry("mantle.product.asset.Asset", [assetId:val.inventoryItemId, productId:val.productId,
+                    assetTypeEnumId:(product.assetTypeEnumId ?: 'AstTpInventory'), classEnumId:product.assetClassEnumId,
                     hasQuantity:(val.inventoryItemTypeId == 'SERIALIZED_INV_ITEM' ? 'N' : 'Y'), ownerPartyId:val.ownerPartyId,
                     facilityId:val.facilityId, locationSeqId:locationSeqId, statusId:map('inventoryStatusId', (String) val.statusId),
                     receivedDate:val.datetimeReceived, manufacturedDate:val.datetimeManufactured, expectedEndOfLife:((String) val.expireDate)?.take(10),
@@ -661,9 +660,9 @@ class OFBizTransform {
             EntityValue product = Moqui.executionContext.entity.find("mantle.product.Product").condition("productId", val.productId).one()
             if (product != null) { logger.info("Skipping Product ${val.productId}, already exists"); et.loadCurrent(false); return }
             et.addEntry(new SimpleEntry("mantle.product.Product", [productId:val.productId, productTypeEnumId:productTypeEnumId,
-                    assetTypeEnumId:OFBizFieldMap.get('productTypeEnumId', (String) val.productTypeId),
-                    assetClassEnumId:OFBizFieldMap.get('productTypeEnumId', (String) val.productTypeId),
-                    productName:val.productName, description:val.description, comments:val.comments,
+                    assetTypeEnumId:OFBizFieldMap.get('assetTypeEnumId', (String) val.productTypeId),
+                    assetClassEnumId:OFBizFieldMap.get('assetClassEnumId', (String) val.productTypeId),
+                    productName:(val.productName ?: val.internalName), description:val.description, comments:val.comments,
                     salesIntroductionDate:val.introductionDate, salesDiscontinuationDate:val.salesDiscontinuationDate,
                     supportDiscontinuationDate:val.supportDiscontinuationDate, salesDiscWhenNotAvail:val.salesDiscWhenNotAvail,
                     requireInventory:val.requireInventory, amountFixed:val.quantityIncluded, amountRequire:val.requireAmount,

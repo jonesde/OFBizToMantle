@@ -336,13 +336,13 @@ class OFBizFieldMap {
             '248000':'248000000', // OTHER LONG TERM OBLIGATION
 
             // these mappings may vary based on how OFBiz was used and how company is organized (these are for mapping to S CORP)
-            '300000':'340000000', // OWNERS EQUITY
-            '310000':'341000000', // CAPITAL STOCK
-            '330000':'345000000', // RETAINED EARNINGS
-            '331000':'342000000', // PAID-IN CAPITAL
-            '332000':'345000000', // TREASURY STOCK => RETAINED EARNINGS
-            '336000':'345000000', // CURRENT PERIOD PROFIT (LOSS) => RETAINED EARNINGS
-            '342000':'344000000', // OWNER DRAWS
+            '300000':'330000000', // OWNERS EQUITY
+            '310000':'331100000', // CAPITAL STOCK (Common Stock)
+            '330000':'335000000', // RETAINED EARNINGS
+            '331000':'332100000', // PAID-IN CAPITAL (Paid-in Capital in Excess of Par on Common Stock)
+            '332000':'331300000', // TREASURY STOCK
+            '336000':'335000000', // CURRENT PERIOD PROFIT (LOSS) => RETAINED EARNINGS
+            '342000':'334000000', // OWNER DRAWS
 
             '400000':'400000000', // SALES
             '401000':'410000000', // SALES REVENUE

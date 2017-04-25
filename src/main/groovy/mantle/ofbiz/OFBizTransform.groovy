@@ -34,13 +34,10 @@ class OFBizTransform {
     static List<List<String>> loadOrderParallel = [
             ['NoteData', 'Party', 'ContactMech', 'Product', 'Lot', 'OrderHeader'],
             ['PartyNote', 'Person', 'PartyGroup', 'PartyRole', 'UserLogin',
-                    'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber',
-                    'PaymentMethod',
-                    'ProductPrice', 'InventoryItem', 'PhysicalInventory',
+                    'PartyContactMechPurpose', 'PostalAddress', 'TelecomNumber', 'PaymentMethod',
+                    'InventoryItem', 'PhysicalInventory',
                     'Shipment', 'ShipmentBoxType',
-                    'Invoice',
-                    'FinAccount',
-                    'GlJournal'],
+                    'Invoice', 'FinAccount', 'GlJournal'], // NOTE skipping: 'ProductPrice',
             ['PartyClassification', 'PartyRelationship', 'CreditCard',
                     'OrderItemShipGroup', 'OrderHeaderNote',
                     'ShipmentItem', 'ShipmentPackage', 'ShipmentRouteSegment',
@@ -119,8 +116,18 @@ class OFBizTransform {
             // NOTE: no organizationPartyId on AcctgTrans in OFBiz, get it from AcctgTransEntry record
         }})
         conf.addTransformer("AcctgTransEntry", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            String acctgTransId = val.acctgTransId
             Map<String, Object> skipCache = getMappingCache("AcctgTransSkip")
-            if (skipCache.get(val.acctgTransId)) { et.loadCurrent(false); return }
+            if (skipCache.get(acctgTransId)) { et.loadCurrent(false); return }
+            // make sure AcctgTrans exists
+            EntityValue acctgTrans = Moqui.executionContext.entity.find("mantle.ledger.transaction.AcctgTrans")
+                    .condition("acctgTransId", acctgTransId).one()
+            if (acctgTrans == null) {
+                logger.warn("AcctgTransEntry ${val.acctgTransEntrySeqId} references AcctgTrans ${val.acctgTransId} that does not exist, skipping")
+                skipCache.put(acctgTransId, true)
+                et.loadCurrent(false)
+                return
+            }
             // make sure shipment exists, shouldn't happen but an issue in one production data set, comment this if not needed:
             String productId = val.productId
             if (productId && Moqui.executionContext.entity.find("mantle.product.Product").condition("productId", productId).one() == null) {
@@ -130,7 +137,7 @@ class OFBizTransform {
             // always using 'Company' for organizationPartyId as an optimization, use this when there are multiple internal orgs with transactions:
             // EntityValue acctgTrans = Moqui.executionContext.entity.find("mantle.ledger.transaction.AcctgTrans").condition("acctgTransId", val.acctgTransId).one()
             // if (!acctgTrans.organizationPartyId) { acctgTrans.organizationPartyId = val.organizationPartyId; acctgTrans.update() }
-            et.addEntry(new SimpleEntry("mantle.ledger.transaction.AcctgTransEntry", [acctgTransId:val.acctgTransId,
+            et.addEntry(new SimpleEntry("mantle.ledger.transaction.AcctgTransEntry", [acctgTransId:acctgTransId,
                     acctgTransEntrySeqId:val.acctgTransEntrySeqId, description:val.description, voucherRef:val.voucherRef,
                     productId:productId, externalProductId:val.theirProductId, assetId:val.inventoryItemId,
                     glAccountTypeEnumId:map('glAccountTypeId', (String) val.glAccountTypeId), dueDate:val.dueDate,
@@ -166,6 +173,12 @@ class OFBizTransform {
                 // NOTE: this only handles USA and CAN states/provinces which had no prefix in OFBiz
                 if (stateProvinceGeoId in ['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT']) stateProvinceGeoId = 'CAN_' + stateProvinceGeoId
                 else stateProvinceGeoId = 'USA_' + stateProvinceGeoId
+            } else if (stateProvinceGeoId) {
+                EntityValue spGeo = Moqui.executionContext.entity.find("moqui.basic.Geo").condition("geoId", stateProvinceGeoId).one()
+                if (spGeo == null) {
+                    logger.info("State/province Geo ${stateProvinceGeoId} not found, not setting on address")
+                    stateProvinceGeoId = null
+                }
             }
             String postalCode = val.postalCode
             if (postalCode) postalCode = postalCode.replaceAll(/\W/, "").toUpperCase()
@@ -247,6 +260,10 @@ class OFBizTransform {
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp)?.take(23)]))
         }})
         conf.addTransformer("InventoryItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            if (val.productId) {
+                EntityValue product = Moqui.executionContext.entity.find("mantle.product.Product").condition("productId", val.productId).one()
+                if (product == null) { logger.warn("Skipping InventoryItem ${val.inventoryItemId}, product referenced ${val.productId} does not exist"); et.loadCurrent(false); return }
+            }
             // some example key cleanup
             String locationSeqId = val.locationSeqId
             if (locationSeqId) { int spaceIdx = locationSeqId.indexOf(" "); if (spaceIdx > 0) locationSeqId = locationSeqId.substring(0, spaceIdx) }
@@ -641,6 +658,8 @@ class OFBizTransform {
             String productTypeEnumId = OFBizFieldMap.get('productTypeEnumId', (String) val.productTypeId)
             if (!productTypeEnumId) { logger.info("Skipping Product ${val.productId} of type ${val.productTypeId}"); et.loadCurrent(false); return }
             // NOTE: this is a very simple transform, not yet near complete for Product
+            EntityValue product = Moqui.executionContext.entity.find("mantle.product.Product").condition("productId", val.productId).one()
+            if (product != null) { logger.info("Skipping Product ${val.productId}, already exists"); et.loadCurrent(false); return }
             et.addEntry(new SimpleEntry("mantle.product.Product", [productId:val.productId, productTypeEnumId:productTypeEnumId,
                     assetTypeEnumId:OFBizFieldMap.get('productTypeEnumId', (String) val.productTypeId),
                     assetClassEnumId:OFBizFieldMap.get('productTypeEnumId', (String) val.productTypeId),
@@ -761,9 +780,16 @@ class OFBizTransform {
             Map<String, Object> val = et.entry.etlValues
             String partyClassificationGroupId = val.partyClassificationGroupId
             if (customerClasses.containsKey(partyClassificationGroupId)) {
-                et.addEntry(new SimpleEntry("mantle.party.PartyClassificationAppl", [partyId:val.partyId,
-                        partyClassificationId:customerClasses.get(partyClassificationGroupId),
-                        fromDate:val.fromDate, thruDate:val.thruDate, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+                String partyClassificationId = customerClasses.get(partyClassificationGroupId)
+                long applCount = Moqui.executionContext.entity.find("mantle.party.PartyClassificationAppl")
+                        .condition("partyId", val.partyId).condition("partyClassificationId", partyClassificationId).count()
+                if (applCount > 0) {
+                    et.loadCurrent(false)
+                } else {
+                    et.addEntry(new SimpleEntry("mantle.party.PartyClassificationAppl", [partyId:val.partyId,
+                            partyClassificationId:partyClassificationId, fromDate:val.fromDate, thruDate:val.thruDate,
+                            lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+                }
             } else if (settlementTermByClass.containsKey(partyClassificationGroupId)) {
                 String agreementId = (String) val.partyId + '_' + partyClassificationGroupId
                 et.addEntry(new SimpleEntry("mantle.party.agreement.Agreement", [agreementId:agreementId, agreementTypeEnumId:'AgrSales',

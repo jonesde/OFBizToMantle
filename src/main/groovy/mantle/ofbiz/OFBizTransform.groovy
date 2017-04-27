@@ -469,17 +469,37 @@ class OFBizTransform {
         }})
         conf.addTransformer("OrderPaymentPreference", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // must be after OrderHeader and OrderItemShipGroup, and for from/to parties after OrderRole
+            // must be after Payment so PaymentIdByOppId cache is populated
+            Map<String, Object> paymentIdByOppId = getMappingCache("PaymentIdByOppId")
+            String paymentId = paymentIdByOppId.get((String) val.orderPaymentPreferenceId)
+
             String orderPartSeqId = "00001" // optimized for only single part orders
-            EntityValue orderPart = Moqui.executionContext.entity.find("mantle.order.OrderPart").condition("orderId", val.orderId)
-                    .condition("orderPartSeqId", orderPartSeqId).one()
-            et.addEntry(new SimpleEntry("mantle.account.payment.Payment", [paymentId:'OPP' + ((String) val.orderPaymentPreferenceId),
-                    paymentTypeEnumId:'PtInvoicePayment', orderId:val.orderId, orderPartSeqId:orderPartSeqId,
-                    fromPartyId:orderPart?.customerPartyId, toPartyId:orderPart?.vendorPartyId,
-                    paymentInstrumentEnumId:map('paymentInstrumentEnumId', (String) val.paymentMethodTypeId),
-                    paymentMethodId:val.paymentMethodId, finAccountId:val.finAccountId, presentFlag:val.presentFlag,
-                    swipedFlag:val.swipedFlag, amount:val.maxAmount, processAttempt:val.processAttempt, needsNsfRetry:val.needsNsfRetry,
-                    paymentAuthCode:val.manualAuthCode, paymentRefNum:val.manualRefNum,
-                    statusId:map('paymentStatusId', (String) val.statusId), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            if (paymentId) {
+                EntityValue payment = Moqui.executionContext.entity.find("mantle.account.payment.Payment").condition("paymentId", paymentId).one()
+                if (!payment.orderId) {
+                    payment.orderId = val.orderId
+                    payment.orderPartSeqId = orderPartSeqId
+                }
+                if (!payment.paymentAuthCode) payment.paymentAuthCode = val.manualAuthCode
+                if (!payment.paymentRefNum) payment.paymentRefNum = val.manualRefNum
+                payment.update()
+                et.loadCurrent(false)
+            } else {
+                // do anything with OPP records in certain statuses like PAYMENT_RECEIVED, PAYMENT_SETTLED, PMNT_RECEIVED, PMNT_SENT, PMNT_CONFIRMED?
+                // OPP records in those statuses SHOULD have a Payment record to map to but not all do
+                if (((String) val.statusId) in ['PAYMENT_RECEIVED', 'PAYMENT_SETTLED', 'PMNT_RECEIVED', 'PMNT_SENT', 'PMNT_CONFIRMED'])
+                    logger.warn("Found OrderPaymentPreference in ${val.statusId} with no corresponding Payment record")
+                EntityValue orderPart = Moqui.executionContext.entity.find("mantle.order.OrderPart").condition("orderId", val.orderId)
+                        .condition("orderPartSeqId", orderPartSeqId).one()
+                et.addEntry(new SimpleEntry("mantle.account.payment.Payment", [paymentId:'OPP' + ((String) val.orderPaymentPreferenceId),
+                        paymentTypeEnumId:'PtOrderPref', orderId:val.orderId, orderPartSeqId:orderPartSeqId,
+                        fromPartyId:orderPart?.customerPartyId, toPartyId:orderPart?.vendorPartyId,
+                        paymentInstrumentEnumId:map('paymentInstrumentEnumId', (String) val.paymentMethodTypeId),
+                        paymentMethodId:val.paymentMethodId, finAccountId:val.finAccountId, presentFlag:val.presentFlag,
+                        swipedFlag:val.swipedFlag, amount:val.maxAmount, processAttempt:val.processAttempt, needsNsfRetry:val.needsNsfRetry,
+                        paymentAuthCode:val.manualAuthCode, paymentRefNum:val.manualRefNum, statusId:map('paymentStatusId', (String) val.statusId),
+                        effectiveDate:((String) val.lastUpdatedTxStamp).take(23), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            }
         }})
         conf.addTransformer("OrderItemBilling", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // after OrderItem, InvoiceItem, AssetReceipt, AssetIssuance
@@ -595,6 +615,11 @@ class OFBizTransform {
         /* ========== Payment ========== */
 
         conf.addTransformer("Payment", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            if (val.paymentPreferenceId) {
+                Map<String, Object> paymentIdByOppId = getMappingCache("PaymentIdByOppId")
+                paymentIdByOppId.put((String) val.paymentPreferenceId, val.paymentId)
+            }
+
             // load after FinAccountTrans, both depend on the other but Payment is mutable and FinancialAccountTrans in Mantle is not (create only)
             et.addEntry(new SimpleEntry("mantle.account.payment.Payment", [paymentId:val.paymentId,
                     paymentTypeEnumId:map('paymentTypeId', (String) val.paymentTypeId), fromPartyId:val.partyIdFrom, toPartyId:val.partyIdTo,
@@ -616,10 +641,21 @@ class OFBizTransform {
         }})
         conf.addTransformer("PaymentGatewayResponse", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // after Payment and OrderPaymentPreference
+            // must be after Payment so PaymentIdByOppId cache is populated
+            Map<String, Object> paymentIdByOppId = getMappingCache("PaymentIdByOppId")
+            String paymentId = paymentIdByOppId.get((String) val.orderPaymentPreferenceId)
+            if (!paymentId) paymentId = 'OPP' + ((String) val.orderPaymentPreferenceId)
+            EntityValue payment = Moqui.executionContext.entity.find("mantle.account.payment.Payment").condition("paymentId", paymentId).one()
+            if (payment == null) {
+                logger.warn("Skipping GatewayResponse ${val.paymentGatewayResponseId} OPP ${val.orderPaymentPreferenceId} type ${val.paymentServiceTypeEnumId} msg: ${val.gatewayMessage}")
+                et.loadCurrent(false)
+                return
+            }
+
             et.addEntry(new SimpleEntry("mantle.account.method.PaymentGatewayResponse", [
                     paymentGatewayResponseId:val.paymentGatewayResponseId,
                     paymentOperationEnumId:map('paymentServiceTypeEnumId', (String) val.paymentServiceTypeEnumId),
-                    paymentId:'OPP' + ((String) val.orderPaymentPreferenceId), paymentMethodId:val.paymentMethodId,
+                    paymentId:paymentId, paymentMethodId:val.paymentMethodId,
                     amount:val.amount, amountUomId:val.currencyUomId, referenceNum:val.referenceNum, altReference:val.altReference,
                     subReference:val.subReference, responseCode:val.gatewayCode, reasonCode:val.gatewayFlag,
                     avsResult:val.gatewayAvsResult, cvResult:val.gatewayCvResult, scoreResult:val.gatewayScoreResult,

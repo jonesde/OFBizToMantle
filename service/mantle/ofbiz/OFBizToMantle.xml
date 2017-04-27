@@ -74,8 +74,9 @@ along with this software (see the LICENSE.md file). If not, see
 
             // check for Finalized/Sent invoices with unpaid amount of 0 and set to Payment Sent
             ec.service.sync().name("mantle.account.InvoiceServices.check#InvoicesPaid").call()
-            // EECAs aren't run to calc invoice totals
+            // EECAs aren't run to calc invoice and payment totals
             ec.service.async().name("mantle.account.InvoiceServices.calculate#MissingInvoiceTotals").call()
+            ec.service.async().name("mantle.account.PaymentServices.calculate#MissingPaymentTotals").call()
             // run indexes that would be run by data feed (but not enabled)
             ec.service.job("IndexDataFeedDocuments").parameter("dataFeedId", "PopCommerceSearch").run()
 

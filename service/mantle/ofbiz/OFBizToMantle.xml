@@ -69,15 +69,16 @@ along with this software (see the LICENSE.md file). If not, see
                 }
             }
 
-            // run recalculate_GlAccountOrgSummaries job's service so it starts from beginning of time
-            ec.service.async().name("mantle.ledger.LedgerServices.recalculate#GlAccountOrgSummaries").parameter("organizationPartyId", "Company").call()
-
-            // check for Finalized/Sent invoices with unpaid amount of 0 and set to Payment Sent
-            ec.service.sync().name("mantle.account.InvoiceServices.check#InvoicesPaid").call()
             // EECAs aren't run to calc invoice and payment totals
-            ec.service.async().name("mantle.account.InvoiceServices.calculate#MissingInvoiceTotals").call()
-            ec.service.async().name("mantle.account.PaymentServices.calculate#MissingPaymentTotals").call()
-            // run indexes that would be run by data feed (but not enabled)
+            ec.service.sync().name("mantle.account.InvoiceServices.calculate#MissingInvoiceTotals").call()
+            ec.service.sync().name("mantle.account.PaymentServices.calculate#MissingPaymentTotals").call()
+            // check for Finalized/Sent invoices with unpaid amount of 0 and set to Payment Sent (do after calculate#MissingInvoiceTotals so totals are in place)
+            ec.service.sync().name("mantle.account.InvoiceServices.check#InvoicesPaid").call()
+
+            // run recalculate_GlAccountOrgSummaries job's service so it starts from beginning of time regardless of if the job has been run before
+            ec.service.sync().name("mantle.ledger.LedgerServices.recalculate#GlAccountOrgSummaries").parameter("organizationPartyId", "Company").call()
+
+            // run indexes that would be run by data feed (but disabled in the startEtl method)
             ec.service.job("IndexDataFeedDocuments").parameter("dataFeedId", "PopCommerceSearch").run()
 
             // resume the recalculate_GlAccountOrgSummaries and check_AllPartyDuplicates jobs

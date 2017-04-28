@@ -488,7 +488,7 @@ class OFBizTransform {
                 // do anything with OPP records in certain statuses like PAYMENT_RECEIVED, PAYMENT_SETTLED, PMNT_RECEIVED, PMNT_SENT, PMNT_CONFIRMED?
                 // OPP records in those statuses SHOULD have a Payment record to map to but not all do
                 if (((String) val.statusId) in ['PAYMENT_RECEIVED', 'PAYMENT_SETTLED', 'PMNT_RECEIVED', 'PMNT_SENT', 'PMNT_CONFIRMED'])
-                    logger.warn("Found OrderPaymentPreference in ${val.statusId} with no corresponding Payment record")
+                    logger.warn("Found OrderPaymentPreference ${val.orderPaymentPreferenceId} for order ${val.orderId} in ${val.statusId} with no corresponding Payment record")
                 EntityValue orderPart = Moqui.executionContext.entity.find("mantle.order.OrderPart").condition("orderId", val.orderId)
                         .condition("orderPartSeqId", orderPartSeqId).one()
                 et.addEntry(new SimpleEntry("mantle.account.payment.Payment", [paymentId:'OPP' + ((String) val.orderPaymentPreferenceId),

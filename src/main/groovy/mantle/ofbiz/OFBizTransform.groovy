@@ -801,10 +801,11 @@ class OFBizTransform {
                     amountUomId:val.currencyUomId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
         conf.addTransformer("OrderShipment", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            String orderPartSeqId = "00001" // optimized for only single part orders
             Map<String, Object> siMappingCache = getMappingCache("ShipmentItemProduct")
             String productId = siMappingCache.get(((String) val.shipmentId) + ':' + ((String) val.shipmentItemSeqId))
             et.addEntry(new SimpleEntry("mantle.shipment.ShipmentItemSource", [shipmentItemSourceId:UUID.randomUUID().toString(),
-                    shipmentId:val.shipmentId, productId:productId, quantity:val.quantity, orderId:val.orderId,
+                    shipmentId:val.shipmentId, productId:productId, quantity:val.quantity, orderId:val.orderId, orderPartSeqId:orderPartSeqId,
                     orderItemSeqId:val.orderItemSeqId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
         // not doing ShipmentItemBilling (shipmentId, shipmentItemSeqId, invoiceId, invoiceItemSeqId), would need to be merged with ShipmentItemSource records from OrderShipment

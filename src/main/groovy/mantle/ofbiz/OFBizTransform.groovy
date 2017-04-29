@@ -371,7 +371,7 @@ class OFBizTransform {
         conf.addTransformer("InvoiceItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             et.addEntry(new SimpleEntry("mantle.account.invoice.InvoiceItem", [invoiceId:val.invoiceId,
                     invoiceItemSeqId:val.invoiceItemSeqId, itemTypeEnumId:map('invoiceItemTypeId', (String) val.invoiceItemTypeId),
-                    assetId:val.inventoryItemId, productId:val.productId, taxableFlag:val.taxableFlag, quantity:val.quantity,
+                    assetId:val.inventoryItemId, productId:val.productId, taxableFlag:val.taxableFlag, quantity:(val.quantity ?: '1'),
                     quantityUomId:val.uomId, amount:val.amount, description:val.description,
                     overrideGlAccountId:map('glAccountId', (String) val.overrideGlAccountId),
                     salesOpportunityId:val.salesOpportunityId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))

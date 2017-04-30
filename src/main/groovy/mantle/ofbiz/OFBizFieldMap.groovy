@@ -330,10 +330,14 @@ class OFBizFieldMap {
             '239000':'239000000', // CURRENT PORTION OF LONG-TERM DEBT
 
             '240000':'240000000', // LONG-TERM NOTES PAYABLE
-            '241000':'241000000', // LONG-TERM OBLIGATION
             '242000':'242000000', // MORTGAGE NOTE PAYABLE
             '243000':'243000000', // LOAN FROM OWNER OR STOCKHOLDER
+            /* TODO: below are custom mappings, these are better defaults:
+            '241000':'241000000', // LONG-TERM OBLIGATION
             '248000':'248000000', // OTHER LONG TERM OBLIGATION
+            */
+            '241000':'241100000', // LONG-TERM OBLIGATION
+            '248000':'241200000', // OTHER LONG TERM OBLIGATION
 
             // these mappings may vary based on how OFBiz was used and how company is organized (these are for mapping to S CORP)
             '300000':'330000000', // OWNERS EQUITY
@@ -341,7 +345,7 @@ class OFBizFieldMap {
             '330000':'335000000', // RETAINED EARNINGS
             '331000':'332100000', // PAID-IN CAPITAL (Paid-in Capital in Excess of Par on Common Stock)
             '332000':'331300000', // TREASURY STOCK
-            '336000':'335000000', // CURRENT PERIOD PROFIT (LOSS) => RETAINED EARNINGS
+            '336000':'850000000', // CURRENT PERIOD PROFIT (LOSS)
             '342000':'334000000', // OWNER DRAWS
 
             '400000':'400000000', // SALES
@@ -524,7 +528,7 @@ class OFBizFieldMap {
             '721000':'651000000', // OFFICE EXPENSE
 
             '730000':'653000000', // SHIPPING EXPENSE
-            /* NOTE: mapping this to COGS accounts but for many companies should be mapped to the expense account:
+            /* TODO: mapping this to COGS accounts but for many companies should be mapped to the expense account:
                 '731000':'653100000', // POSTAGE EXPENSE */
             '731000':'519200000', // POSTAGE EXPENSE
             '739000':'653200000', // OTHER POSTAGE EXPENSE

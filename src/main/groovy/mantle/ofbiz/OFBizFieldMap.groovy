@@ -32,7 +32,7 @@ class OFBizFieldMap {
         acctgTransTypeId:[AMORTIZATION:'AttAmortization', AR_CLOSING_ADJ:'AttPeriodClosing', AR_PMT_CREDIT:'AttInvoiceAdjust',
                 CAPITALIZATION:'AttCapitalization', CREDIT_LINE:'AttCreditLine', CREDIT_MEMO:'AttCreditMemo',
                 CUST_RTN_INVOICE:'AttCustRtnInvoice', DEPRECIATION:'AttDepreciation', DISBURSEMENT:'AttDisbursement',
-                EXTERNAL_ACCTG_TRANS:'AttExternal', INCOMING_PAYMENT:'AttPayment', INTERNAL_ACCTG_TRANS:'AttInternal',
+                EXTERNAL_ACCTG_TRANS:'AttExternal', INCOMING_PAYMENT:'AttIncomingPayment', INTERNAL_ACCTG_TRANS:'AttInternal',
                 INVENTORY:'AttSalesInventory', INVENTORY_RETURN:'AttReturnInventory', ITEM_VARIANCE:'AttInventoryVariance',
                 MANUFACTURING:'AttManufacturing', NOTE:'AttNote', OBLIGATION_ACCTG_TRA:'AttObligation',
                 OTHER_INTERNAL:'AttInternal', OTHER_OBLIGATION:'AttOtherObligation', OUTGOING_PAYMENT:'AttOutgoingPayment',

@@ -435,10 +435,19 @@ class OFBizTransform {
         conf.addTransformer("OrderItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // must be after OrderHeader and OrderItemShipGroup
             String orderPartSeqId = "00001" // optimized for only single part orders
-            if (Moqui.executionContext.entity.find("mantle.order.OrderPart").condition("orderId", val.orderId).
-                    condition("orderPartSeqId", orderPartSeqId).one() == null) {
+            EntityValue orderPart = Moqui.executionContext.entity.find("mantle.order.OrderPart").condition("orderId", val.orderId).
+                    condition("orderPartSeqId", orderPartSeqId).one()
+            if (orderPart == null) {
                 logger.info("Found OrderItem in order ${val.orderId} that has no OrderPart, creating dummy record")
-                et.addEntry(new SimpleEntry("mantle.order.OrderPart", [orderId:val.orderId, orderPartSeqId:orderPartSeqId]))
+                orderPart = Moqui.executionContext.entity.makeValue("mantle.order.OrderPart")
+                        .set("orderId", val.orderId).set("orderPartSeqId", orderPartSeqId).create()
+            }
+            // if OrderItem has correspondingPoId set on OrderPart.otherPartyOrderId
+            if (val.correspondingPoId) {
+                if (orderPart.otherPartyOrderId && !((String) orderPart.otherPartyOrderId).contains((String) val.correspondingPoId)) {
+                    orderPart.otherPartyOrderId = ((String) orderPart.otherPartyOrderId) + ', ' + val.correspondingPoId
+                } else { orderPart.otherPartyOrderId = val.correspondingPoId }
+                orderPart.update()
             }
             et.addEntry(new SimpleEntry("mantle.order.OrderItem", [orderId:val.orderId, orderPartSeqId:orderPartSeqId,
                     orderItemSeqId:val.orderItemSeqId, productId:val.productId, otherPartyProductId:val.supplierProductId,
@@ -502,6 +511,20 @@ class OFBizTransform {
             }
         }})
         conf.addTransformer("OrderItemBilling", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            //
+            String orderPartSeqId = "00001" // optimized for only single part orders
+            EntityValue orderPart = Moqui.executionContext.entity.find("mantle.order.OrderPart").condition("orderId", val.orderId).
+                    condition("orderPartSeqId", orderPartSeqId).one()
+            if (orderPart?.otherPartyOrderId) {
+                EntityValue invoice = Moqui.executionContext.entity.find("mantle.account.invoice.Invoice").condition("invoiceId", val.invoiceId).one()
+                if (invoice != null) {
+                    if (invoice.referenceNumber && !((String) invoice.referenceNumber).contains((String) orderPart.otherPartyOrderId)) {
+                        invoice.referenceNumber = ((String) invoice.referenceNumber) + ', ' + orderPart.otherPartyOrderId
+                    } else { invoice.referenceNumber = orderPart.otherPartyOrderId }
+                    invoice.update()
+                }
+            }
+
             // after OrderItem, InvoiceItem, AssetReceipt, AssetIssuance
             et.addEntry(new SimpleEntry("mantle.order.OrderItemBilling", [orderItemBillingId:UUID.randomUUID().toString(),
                     orderId:val.orderId, orderItemSeqId:val.orderItemSeqId, invoiceId:val.invoiceId, invoiceItemSeqId:val.invoiceItemSeqId,

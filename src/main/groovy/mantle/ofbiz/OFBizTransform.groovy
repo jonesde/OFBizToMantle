@@ -15,6 +15,9 @@ package mantle.ofbiz
 
 import groovy.transform.CompileStatic
 import org.moqui.Moqui
+import org.moqui.entity.EntityCondition
+import org.moqui.entity.EntityFind
+import org.moqui.entity.EntityList
 import org.moqui.entity.EntityValue
 import org.moqui.etl.SimpleEtl
 import org.moqui.etl.SimpleEtl.EntryTransform
@@ -39,7 +42,7 @@ class OFBizTransform {
                     'Shipment', 'ShipmentBoxType',
                     'Invoice', 'FinAccount', 'GlJournal'], // NOTE skipping: 'ProductPrice',
             ['PartyClassification', 'PartyRelationship', 'CreditCard',
-                    'OrderItemShipGroup', 'OrderHeaderNote',
+                    'OrderItemShipGroup', 'OrderHeaderNote', 'CostComponent',
                     'ShipmentItem', 'ShipmentPackage', 'ShipmentRouteSegment',
                     'InvoiceContactMech', 'InvoiceRole', 'InvoiceItem',
                     'FinAccountTrans'],
@@ -342,8 +345,31 @@ class OFBizTransform {
                     receivedByUserId:val.receivedByUserLoginId, receivedDate:val.datetimeReceived, itemDescription:val.itemDescription,
                     quantityAccepted:val.quantityAccepted, quantityRejected:val.quantityRejected,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
-            // NOTE: skipping because returns handled: returnId:val.returnId, returnItemSeqId:val.returnItemSeqId
+            // NOTE: skipping because returns not yet handled: returnId:val.returnId, returnItemSeqId:val.returnItemSeqId
         }})
+        conf.addTransformer("CostComponent", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // NOTE: supports only costComponentTypeId=EST_STD_GEN_COST,GEN_COST setting Asset.acquireCost in matching date range
+            // needs: Asset
+            et.loadCurrent(false) // we'll never load a value, just updating records
+            if (val.costComponentTypeId != 'EST_STD_GEN_COST' && val.costComponentTypeId != 'GEN_COST') return
+            if (!val.cost) return
+
+            Timestamp fromDate = Moqui.executionContext.l10n.parseTimestamp((String) val.fromDate, null)
+            Timestamp thruDate = Moqui.executionContext.l10n.parseTimestamp((String) val.thruDate, null)
+
+            // TODO:
+            EntityFind assetFind = Moqui.executionContext.entity.find("mantle.product.asset.Asset")
+                    .condition("productId", val.productId)
+            if (fromDate != (Object) null) assetFind.condition("receivedDate", EntityCondition.GREATER_THAN_EQUAL_TO, fromDate)
+            if (thruDate != (Object) null) assetFind.condition("receivedDate", EntityCondition.LESS_THAN_EQUAL_TO, thruDate)
+            EntityList assetList = assetFind.list()
+            for (EntityValue asset in assetList) {
+                asset.set("acquireCost", new BigDecimal((String) val.cost))
+                asset.update()
+            }
+            logger.info("Updated ${assetList.size()} Asset records with CostComponent cost ${val.cost} for product ${val.productId} from ${fromDate} thru ${thruDate}")
+        }})
+
 
         /* ========== Invoice ========== */
 

@@ -16,6 +16,7 @@ package mantle.ofbiz
 import groovy.transform.CompileStatic
 import org.moqui.Moqui
 import org.moqui.entity.EntityCondition
+import org.moqui.entity.EntityFacade
 import org.moqui.entity.EntityFind
 import org.moqui.entity.EntityList
 import org.moqui.entity.EntityValue
@@ -357,17 +358,25 @@ class OFBizTransform {
             Timestamp fromDate = Moqui.executionContext.l10n.parseTimestamp((String) val.fromDate, null)
             Timestamp thruDate = Moqui.executionContext.l10n.parseTimestamp((String) val.thruDate, null)
 
-            // TODO:
-            EntityFind assetFind = Moqui.executionContext.entity.find("mantle.product.asset.Asset")
+            EntityFacade entity = Moqui.executionContext.entity
+            EntityFind assetFind = entity.find("mantle.product.asset.Asset")
                     .condition("productId", val.productId)
-            if (fromDate != (Object) null) assetFind.condition("receivedDate", EntityCondition.GREATER_THAN_EQUAL_TO, fromDate)
-            if (thruDate != (Object) null) assetFind.condition("receivedDate", EntityCondition.LESS_THAN_EQUAL_TO, thruDate)
+            if (fromDate != (Object) null || thruDate != (Object) null) {
+                List andList = []
+                if (fromDate != (Object) null) andList.add(entity.conditionFactory.makeCondition("receivedDate", EntityCondition.GREATER_THAN_EQUAL_TO, fromDate))
+                if (thruDate != (Object) null) andList.add(entity.conditionFactory.makeCondition("receivedDate", EntityCondition.LESS_THAN_EQUAL_TO, thruDate))
+                // allow null receivedDate for all CostComponent records, will effectively set it to value of last matching product in file, generally the most recent as OFBiz sorts exports by last updated stamp
+                assetFind.condition(entity.conditionFactory.makeCondition([entity.conditionFactory.makeCondition("receivedDate", EntityCondition.LESS_THAN_EQUAL_TO, thruDate),
+                        entity.conditionFactory.makeCondition(andList)], EntityCondition.JoinOperator.OR))
+            }
             EntityList assetList = assetFind.list()
+            int nullReceived = 0
             for (EntityValue asset in assetList) {
                 asset.set("acquireCost", new BigDecimal((String) val.cost))
                 asset.update()
+                if (asset.receivedDate == null) nullReceived++
             }
-            logger.info("Updated ${assetList.size()} Asset records with CostComponent cost ${val.cost} for product ${val.productId} from ${fromDate} thru ${thruDate}")
+            logger.info("Updated ${assetList.size()} Asset records (${nullReceived} null rec date) with CostComponent cost ${val.cost} for product ${val.productId} from ${fromDate} thru ${thruDate}")
         }})
 
 

@@ -282,7 +282,7 @@ class OFBizTransform {
             et.addEntry(new SimpleEntry("mantle.product.asset.Asset", [assetId:val.inventoryItemId, productId:val.productId,
                     assetTypeEnumId:(product.assetTypeEnumId ?: 'AstTpInventory'), classEnumId:product.assetClassEnumId,
                     hasQuantity:(val.inventoryItemTypeId == 'SERIALIZED_INV_ITEM' ? 'N' : 'Y'), ownerPartyId:val.ownerPartyId,
-                    facilityId:val.facilityId, locationSeqId:locationSeqId, statusId:map('inventoryStatusId', (String) val.statusId),
+                    facilityId:val.facilityId, locationSeqId:locationSeqId, statusId:(map('inventoryStatusId', (String) val.statusId) ?: 'AstAvailable'),
                     receivedDate:val.datetimeReceived, manufacturedDate:val.datetimeManufactured, expectedEndOfLife:((String) val.expireDate)?.take(10),
                     lotId:val.lotId, comments:val.comments, quantityOnHandTotal:val.quantityOnHandTotal,
                     availableToPromiseTotal:val.availableToPromiseTotal, serialNumber:val.serialNumber,

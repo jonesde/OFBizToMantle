@@ -684,8 +684,8 @@ class OFBizTransform {
                     paymentInstrumentEnumId:map('paymentInstrumentEnumId', (String) val.paymentMethodTypeId),
                     paymentMethodId:val.paymentMethodId, statusId:map('paymentStatusId', (String) val.statusId),
                     effectiveDate:val.effectiveDate, amount:val.amount, amountUomId:val.currencyUomId,
-                    paymentRefNum:val.paymentRefNum, comments:val.comments, finAccountTransId:val.finAccountTransId,
-                    overrideGlAccountId:map('glAccountId', (String) val.overrideGlAccountId),
+                    paymentRefNum:(val.checkNum ?: val.paymentRefNum), comments:(val.checkNum && val.paymentRefNum ? 'Ref: ' + val.paymentRefNum + (val.comments ? '; ' + val.comments : '') : val.comments),
+                    finAccountTransId:val.finAccountTransId, overrideGlAccountId:map('glAccountId', (String) val.overrideGlAccountId),
                     originalCurrencyAmount:val.actualCurrencyAmount, originalCurrencyUomId:val.actualCurrencyUomId,
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
             // NOTE: doing nothing with paymentGatewayResponseId (only ref from PaymentGatewayResponse to Payment in Mantle), paymentPreferenceId

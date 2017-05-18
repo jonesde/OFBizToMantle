@@ -623,6 +623,8 @@ class OFBizTransform {
                 rtMapped = roleTypeId
             }
             et.addEntry(new SimpleEntry("mantle.party.PartyRole", [partyId:val.partyId, roleTypeId:rtMapped, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            if (rtMapped in ['CustomerBillTo', 'CustomerEndUser', 'CustomerPlacing', 'CustomerShipTo'])
+                et.addEntry(new SimpleEntry("mantle.party.PartyRole", [partyId:val.partyId, roleTypeId:'Customer', lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
         conf.addTransformer("Person", new Transformer() { void transform(EntryTransform et) {
             Map<String, Object> val = et.entry.etlValues

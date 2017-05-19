@@ -693,11 +693,13 @@ class OFBizTransform {
             // NOTE: doing nothing with paymentGatewayResponseId (only ref from PaymentGatewayResponse to Payment in Mantle), paymentPreferenceId
         }})
         conf.addTransformer("PaymentApplication", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            EntityValue payment = Moqui.executionContext.entity.find("mantle.account.payment.Payment").condition("paymentId", val.paymentId).one()
             et.addEntry(new SimpleEntry("mantle.account.payment.PaymentApplication", [paymentApplicationId:val.paymentApplicationId,
                     paymentId:val.paymentId, invoiceId:val.invoiceId, invoiceItemSeqId:val.invoiceItemSeqId,
                     billingAccountId:val.billingAccountId, toPaymentId:val.toPaymentId, taxAuthGeoId:val.taxAuthGeoId,
                     overrideGlAccountId:map('glAccountId', (String) val.overrideGlAccountId),
-                    amountApplied:val.amountApplied, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+                    amountApplied:val.amountApplied, appliedDate:(payment?.effectiveDate ?: ((String) val.lastUpdatedTxStamp).take(23)),
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
         conf.addTransformer("PaymentGatewayResponse", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // after Payment and OrderPaymentPreference

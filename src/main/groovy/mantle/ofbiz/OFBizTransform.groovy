@@ -51,10 +51,10 @@ class OFBizTransform {
             ['OrderItem'],
             ['OrderAdjustment', 'OrderContactMech', 'OrderItemShipGrpInvRes', 'OrderPaymentPreference',
                     'ItemIssuance', 'ShipmentReceipt', 'ShipmentPackageContent', 'ShipmentPackageRouteSeg', 'OrderShipment'],
-            ['PaymentApplication', 'PaymentGatewayResponse',
+            ['PaymentApplication', 'PaymentGatewayResponse', 'PaymentCreditType',
                     'InventoryItemDetail', 'OrderItemBilling', 'OrderAdjustmentBilling',
                     'AcctgTrans'],
-            ['AcctgTransEntry']
+            ['AcctgTransEntry', 'PaymentCredit']
     ]
 
     // NOTE: for really large imports there may be memory constraint issues and this would need to a be a disk based cache
@@ -541,8 +541,9 @@ class OFBizTransform {
                         paymentInstrumentEnumId:map('paymentInstrumentEnumId', (String) val.paymentMethodTypeId),
                         paymentMethodId:val.paymentMethodId, finAccountId:val.finAccountId, presentFlag:val.presentFlag,
                         swipedFlag:val.swipedFlag, amount:val.maxAmount, processAttempt:val.processAttempt, needsNsfRetry:val.needsNsfRetry,
-                        paymentAuthCode:val.manualAuthCode, paymentRefNum:val.manualRefNum, statusId:map('paymentStatusId', (String) val.statusId),
+                        paymentAuthCode:val.manualAuthCode, paymentRefNum:val.manualRefNum, statusId:'PmntCancelled',
                         effectiveDate:((String) val.lastUpdatedTxStamp).take(23), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+                // NOTE setting all cancelled so we don't get unapplied seemingly valid Payment records: statusId:map('paymentStatusId', (String) val.statusId)
             }
         }})
         conf.addTransformer("OrderItemBilling", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
@@ -723,6 +724,42 @@ class OFBizTransform {
                     avsResult:val.gatewayAvsResult, cvResult:val.gatewayCvResult, scoreResult:val.gatewayScoreResult,
                     reasonMessage:val.gatewayMessage, transactionDate:val.transactionDate, resultDeclined:val.resultDeclined,
                     resultNsf:val.resultNsf, resultBadExpire:val.resultBadExpire, resultBadCardNumber:val.resultBadCardNumber,
+                    lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+        }})
+
+        // NOTE: PaymentCreditType and PaymentCredit are custom entities for adjusting Payment
+        conf.addTransformer("PaymentCreditType", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            et.loadCurrent(false)
+            Map<String, Object> paymentCreditTypeCache = getMappingCache("PaymentCreditType")
+            paymentCreditTypeCache.put((String) val.creditTypeId, val)
+        }})
+        conf.addTransformer("PaymentCredit", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            // run after PaymentApplication
+            et.loadCurrent(false)
+            Map<String, Object> paymentCreditTypeCache = getMappingCache("PaymentCreditType")
+            Map<String, Object> paymentCreditType = (Map<String, Object>) paymentCreditTypeCache.get((String) val.creditTypeId, val)
+            String overrideGlAccountId = map('glAccountId', (String) val.overrideGlAccountId ?: (String) paymentCreditType.defaultGlAccountId)
+            String paymentId = val.paymentId
+            String description = paymentCreditType.description
+            BigDecimal amount = new BigDecimal((String) val.amount)
+
+            EntityValue payment = Moqui.executionContext.entity.find("mantle.account.payment.Payment").condition("paymentId", paymentId).one()
+            if (((String) payment.statusId) in ["PmntCancelled", "PmntVoid", "PmntDeclined", "PmntRefunded"]) return
+            EntityList paymentAppls = Moqui.executionContext.entity.find("mantle.account.payment.PaymentApplication")
+                    .condition("paymentId", paymentId).orderBy("-amountApplied").list()
+            if (paymentAppls.size() == 0) { logger.error("No PaymentApplication found for Payment ${paymentId} in PaymentCredit ${val.creditId}, not adjusting PaymentApplication or Invoice"); return }
+            EntityValue paymentAppl = paymentAppls[0]
+            String invoiceId = paymentAppl.invoiceId
+            if (paymentAppls.size() > 1) logger.warn("Multiple (${paymentAppls.size()}) PaymentApplication records found for Payment ${paymentId} in PaymentCredit ${val.creditId}, adjusting first Invoice ${invoiceId}")
+
+            paymentAppl.amountOriginallyApplied = paymentAppl.amountApplied
+            paymentAppl.amountApplied = ((BigDecimal) paymentAppl.amountApplied) - amount
+            paymentAppl.update()
+            if (((BigDecimal) paymentAppl.amountApplied) < 0.0) logger.error("Adjusted PaymentApplication ${paymentAppl.paymentApplicationId} for PaymentCredit ${val.creditId} Payment ${paymentId} to less than zero ${paymentAppl.amountApplied}")
+
+            et.addEntry(new SimpleEntry("mantle.account.invoice.InvoiceItem", [invoiceId:invoiceId,
+                    invoiceItemSeqId:null, itemTypeEnumId:'ItemInvAdjust', quantity:'1', amount:-amount, description:description,
+                    overrideGlAccountId:overrideGlAccountId, itemDate:((String) val.lastUpdatedTxStamp).take(23),
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
 

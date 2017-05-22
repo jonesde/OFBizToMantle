@@ -746,16 +746,31 @@ class OFBizTransform {
             EntityValue payment = Moqui.executionContext.entity.find("mantle.account.payment.Payment").condition("paymentId", paymentId).one()
             if (((String) payment.statusId) in ["PmntCancelled", "PmntVoid", "PmntDeclined", "PmntRefunded"]) return
             EntityList paymentAppls = Moqui.executionContext.entity.find("mantle.account.payment.PaymentApplication")
-                    .condition("paymentId", paymentId).orderBy("-amountApplied").list()
-            if (paymentAppls.size() == 0) { logger.error("No PaymentApplication found for Payment ${paymentId} in PaymentCredit ${val.creditId}, not adjusting PaymentApplication or Invoice"); return }
+                    .condition("paymentId", paymentId).condition("invoiceId", "!=", null).orderBy("-amountApplied").list()
+            if (paymentAppls.size() == 0) {
+                logger.warn("No PaymentApplication found for Payment ${paymentId} in PaymentCredit ${val.creditId}, creating PaymentApplication with overrideGlAccountId")
+                // NOTE: using negative amount here as records like this are used to zero out the payment, post directly to gl account
+                et.addEntry(new SimpleEntry("mantle.account.payment.PaymentApplication", [paymentApplicationId:('PCDT' + val.creditId),
+                        paymentId:paymentId, amountApplied:-amount, overrideGlAccountId:overrideGlAccountId,
+                        appliedDate:((String) val.lastUpdatedTxStamp).take(23),
+                        lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+                return
+            }
             EntityValue paymentAppl = paymentAppls[0]
             String invoiceId = paymentAppl.invoiceId
             if (paymentAppls.size() > 1) logger.warn("Multiple (${paymentAppls.size()}) PaymentApplication records found for Payment ${paymentId} in PaymentCredit ${val.creditId}, adjusting first Invoice ${invoiceId}")
 
             paymentAppl.amountOriginallyApplied = paymentAppl.amountApplied
-            paymentAppl.amountApplied = ((BigDecimal) paymentAppl.amountApplied) - amount
+            BigDecimal applAmountApplied = (BigDecimal) paymentAppl.amountApplied
+            if (amount > applAmountApplied) {
+                BigDecimal diff = amount - applAmountApplied
+                payment.amount = ((BigDecimal) payment.amount) + diff
+                payment.update()
+                amount = applAmountApplied
+            }
+            paymentAppl.amountApplied = applAmountApplied - amount
             paymentAppl.update()
-            if (((BigDecimal) paymentAppl.amountApplied) < 0.0) logger.error("Adjusted PaymentApplication ${paymentAppl.paymentApplicationId} for PaymentCredit ${val.creditId} Payment ${paymentId} to less than zero ${paymentAppl.amountApplied}")
+            // if (applAmountApplied < 0.0) logger.error("Adjusted PaymentApplication ${paymentAppl.paymentApplicationId} for PaymentCredit ${val.creditId} Payment ${paymentId} to less than zero ${paymentAppl.amountApplied}")
 
             et.addEntry(new SimpleEntry("mantle.account.invoice.InvoiceItem", [invoiceId:invoiceId,
                     invoiceItemSeqId:null, itemTypeEnumId:'ItemInvAdjust', quantity:'1', amount:-amount, description:description,

@@ -665,12 +665,20 @@ class OFBizTransform {
                     }
                 }
             }
-            et.addEntry(new SimpleEntry("moqui.security.UserAccount", [userId:val.userLoginId, username:val.userLoginId,
-                partyId:val.partyId, passwordHint:val.passwordHint, requirePasswordChange:val.requirePasswordChange,
-                disabled:(val.enabled == 'N' ? 'Y' : 'N'), disabledDateTime:val.disabledDateTime, successiveFailedLogins:val.successiveFailedLogins,
-                currencyUomId:val.lastCurrencyUom, locale:val.lastLocale, timeZone:val.lastTimeZone,
-                currentPassword:currentPassword, passwordSalt:passwordSalt, passwordHashType:passwordHashType, passwordBase64:passwordBase64,
-                passwordSetDate:((String) val.lastUpdatedTxStamp).take(23), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            // create the UserAccount record directly here so we can add Party/Person/etc records immediately
+            et.loadCurrent(false)
+            Moqui.executionContext.service.sync().name("create#moqui.security.UserAccount")
+                .parameters([userId:val.userLoginId, username:val.userLoginId, partyId:val.partyId, passwordHint:val.passwordHint,
+                    requirePasswordChange:val.requirePasswordChange, disabled:(val.enabled == 'N' ? 'Y' : 'N'),
+                    disabledDateTime:val.disabledDateTime, successiveFailedLogins:val.successiveFailedLogins,
+                    currencyUomId:val.lastCurrencyUom, locale:val.lastLocale, timeZone:val.lastTimeZone,
+                    currentPassword:currentPassword, passwordSalt:passwordSalt, passwordHashType:passwordHashType, passwordBase64:passwordBase64,
+                    passwordSetDate:((String) val.lastUpdatedTxStamp).take(23), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)])
+                .call()
+            if (!val.partyId) {
+                Moqui.executionContext.service.sync().name("mantle.party.PartyServices.create#UserAccountPerson")
+                        .parameter("userId", val.userLoginId).call()
+            }
         }})
 
         /* ========== Payment ========== */

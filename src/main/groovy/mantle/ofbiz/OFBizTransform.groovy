@@ -408,10 +408,11 @@ class OFBizTransform {
                     roleTypeId:map('roleTypeId', (String) val.roleTypeId), lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
         }})
         conf.addTransformer("InvoiceItem", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
+            EntityValue invoice = Moqui.executionContext.entity.find("mantle.account.invoice.Invoice").condition("invoiceId", val.invoiceId).one()
             et.addEntry(new SimpleEntry("mantle.account.invoice.InvoiceItem", [invoiceId:val.invoiceId,
                     invoiceItemSeqId:val.invoiceItemSeqId, itemTypeEnumId:map('invoiceItemTypeId', (String) val.invoiceItemTypeId),
                     assetId:val.inventoryItemId, productId:val.productId, taxableFlag:val.taxableFlag, quantity:(val.quantity ?: '1'),
-                    quantityUomId:val.uomId, amount:val.amount, description:val.description,
+                    quantityUomId:val.uomId, amount:val.amount, description:val.description, itemDate:invoice.invoiceDate,
                     overrideGlAccountId:map('glAccountId', (String) val.overrideGlAccountId),
                     salesOpportunityId:val.salesOpportunityId, lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
             // NOTE: could look up taxAuthorityId by taxAuthGeoId and taxAuthPartyId

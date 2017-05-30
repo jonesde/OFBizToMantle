@@ -103,9 +103,13 @@ class OFBizTransform {
                 try { if (Timestamp.valueOf(postedDate) > nowStamp) logger.warn("AcctgTrans ${val.acctgTransId} has future postedDate ${postedDate}") }
                 catch (Exception e) { logger.warn("Error checking AcctgTrans timestamps", e) }
             }
+            // if tx type is AttInvoiceAdjust and there is no invoiceId but there is a paymentId then change it to AttPaymentAdjust
+            String acctgTransTypeEnumId = map('acctgTransTypeId', (String) val.acctgTransTypeId)
+            if ("AttInvoiceAdjust".equals(acctgTransTypeEnumId) && !val.invoiceId && val.paymentId)
+                acctgTransTypeEnumId = "AttPaymentAdjust"
 
             et.addEntry(new SimpleEntry("mantle.ledger.transaction.AcctgTrans", [acctgTransId:val.acctgTransId,
-                    acctgTransTypeEnumId:map('acctgTransTypeId', (String) val.acctgTransTypeId), otherPartyId:val.partyId,
+                    acctgTransTypeEnumId:acctgTransTypeEnumId, otherPartyId:val.partyId,
                     organizationPartyId:'Company', // if there are multiple internal orgs with transactions remove this and uncomment code in AcctgTransEntry
                     amountUomId:'USD', // change this for other currencies, if there are multiple currencies need to get from AcctgTransEntry like organizationPartyId
                     description:val.description, transactionDate:transactionDate, isPosted:val.isPosted, postedDate:postedDate,

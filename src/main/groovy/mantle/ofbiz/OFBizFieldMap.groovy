@@ -66,8 +66,8 @@ class OFBizFieldMap {
                 DOMAIN_NAME:'CmtDomainName', WEB_ADDRESS:'CmtWebAddress'],
 
         // FinancialAccount
-        finAccountTypeId:[BANK_ACCOUNT:'BankAccount', CREDIT_CARD_ACCOUNT:'CreditCard', DEPOSIT_ACCOUNT:'DepositAccount',
-                EQUITY_LINE_ACCOUNT:'EquityLine', GIFTCERT_ACCOUNT:'GiftCertificate', INVESTMENT_ACCOUNT:'Investment',
+        finAccountTypeId:[BANK_ACCOUNT:'DepositAccount', CREDIT_CARD_ACCOUNT:'LoanAccount', DEPOSIT_ACCOUNT:'DepositAccount',
+                EQUITY_LINE_ACCOUNT:'LoanAccount', GIFTCERT_ACCOUNT:'GiftCertificate', INVESTMENT_ACCOUNT:'DepositAccount',
                 LOAN_ACCOUNT:'LoanAccount', REPLENISH_ACCOUNT:'Replenish', STORE_CREDIT_ACCT:'CustomerCredit', SVCCRED_ACCOUNT:'ServiceCredit'],
         finAccountStatusId:[FNACT_ACTIVE:'FaActive', FNACT_CANCELLED:'FaCancelled', FNACT_MANFROZEN:'FaManFrozen', FNACT_NEGPENDREPL:'FaNegPendRepl'],
         finAccountTransTypeId:[ADJUSTMENT:'FattAdjustment', DEPOSIT:'FattDeposit', WITHDRAWAL:'FattWithdraw'],

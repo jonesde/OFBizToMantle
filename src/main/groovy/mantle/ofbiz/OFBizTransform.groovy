@@ -794,13 +794,18 @@ class OFBizTransform {
         /* ========== PaymentMethod ========== */
 
         conf.addTransformer("PaymentMethod", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
-            if (!'CREDIT_CARD'.equals(val.paymentMethodTypeId)) { et.loadCurrent(false); return }
+            String paymentMethodTypeEnumId = map('paymentMethodTypeEnumId', (String) val.paymentMethodTypeId)
+            if (!(paymentMethodTypeEnumId in ['PmtCreditCard', 'PmtBankAccount'])) { et.loadCurrent(false); return }
             et.addEntry(new SimpleEntry("mantle.account.method.PaymentMethod", [paymentMethodId:val.paymentMethodId,
-                    paymentMethodTypeEnumId:map('paymentMethodTypeEnumId', (String) val.paymentMethodTypeId),
-                    ownerPartyId:val.partyId, description:val.description, fromDate:val.fromDate, thruDate:val.thruDate,
-                    overrideGlAccountId:map('glAccountId', (String) val.glAccountId),
+                    paymentMethodTypeEnumId:paymentMethodTypeEnumId, ownerPartyId:val.partyId, description:val.description,
+                    fromDate:val.fromDate, thruDate:val.thruDate, overrideGlAccountId:map('glAccountId', (String) val.glAccountId),
                     lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
             // NOTE: skipping finAccountId for now, needs FinAccount transformer
+            if (paymentMethodTypeEnumId == 'PmtBankAccount') {
+                // NOTE: this could come from EftAccount records, but also mapping to this type for OFBiz types other than EftAccount
+                et.addEntry(new SimpleEntry("mantle.account.method.BankAccount", [paymentMethodId:val.paymentMethodId,
+                        typeEnumId:'BatChecking', lastUpdatedStamp:((String) val.lastUpdatedTxStamp).take(23)]))
+            }
         }})
         conf.addTransformer("CreditCard", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             et.addEntry(new SimpleEntry("mantle.account.method.PaymentMethod", [paymentMethodId:val.paymentMethodId,

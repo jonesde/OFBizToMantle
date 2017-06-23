@@ -795,7 +795,7 @@ class OFBizTransform {
 
         conf.addTransformer("PaymentMethod", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             String paymentMethodTypeEnumId = map('paymentMethodTypeEnumId', (String) val.paymentMethodTypeId)
-            if (!(paymentMethodTypeEnumId in ['PmtCreditCard', 'PmtBankAccount'])) { et.loadCurrent(false); return }
+            // if (!(paymentMethodTypeEnumId in ['PmtCreditCard', 'PmtBankAccount'])) { et.loadCurrent(false); return }
             et.addEntry(new SimpleEntry("mantle.account.method.PaymentMethod", [paymentMethodId:val.paymentMethodId,
                     paymentMethodTypeEnumId:paymentMethodTypeEnumId, ownerPartyId:val.partyId, description:val.description,
                     fromDate:val.fromDate, thruDate:val.thruDate, overrideGlAccountId:map('glAccountId', (String) val.glAccountId),

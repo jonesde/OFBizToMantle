@@ -96,8 +96,9 @@ class OFBizFieldMap {
 
         // Order
         salesChannelEnumId:[EMAIL_SALES_CHANNEL:'ScEmail', PHONE_SALES_CHANNEL:'ScPhone', UNKNWN_SALES_CHANNEL:'ScUnknown', WEB_SALES_CHANNEL:'ScWeb'],
-        orderStatusId:[ORDER_APPROVED:'OrderApproved', ORDER_CANCELLED:'OrderCancelled', ORDER_COMPLETED:'OrderCompleted',
-                ORDER_CREATED:'OrderOpen', ORDER_HOLD:'OrderHold', ORDER_PROCESSING:'OrderProcessing',
+        // NOTE: ORDER_APPROVED and ORDER_PROCESSING are mapped to OrderPlaced for in flight orders to review, approve and ship after migration
+        orderStatusId:[ORDER_APPROVED:'OrderPlaced', ORDER_CANCELLED:'OrderCancelled', ORDER_COMPLETED:'OrderCompleted',
+                ORDER_CREATED:'OrderOpen', ORDER_HOLD:'OrderHold', ORDER_PROCESSING:'OrderPlaced',
                 ORDER_REJECTED:'OrderRejected', ORDER_SENT:'OrderSent'],
         shipmentMethodTypeId:[AIR:'ShMthNextDay', GROUND:'ShMthGround', NO_SHIPPING:null, STANDARD:'ShMthGround', 'USPS-CAN':'ShMthGround', 'USPS Free':'ShMthGround'],
         orderItemTypeId:[ASSET_ORDER_ITEM:'ItemAsset', BULK_ORDER_ITEM:'ItemInventory', INVENTORY_ORDER_ITEM:'ItemInventory',

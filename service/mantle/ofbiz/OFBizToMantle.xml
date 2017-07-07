@@ -82,8 +82,8 @@ along with this software (see the LICENSE.md file). If not, see
             ec.service.sync().name("mantle.ledger.LedgerServices.recalculate#GlAccountOrgSummaries").parameter("organizationPartyId", "Company").call()
 
             // run indexes that would be run by data feed (but disabled in the startEtl method)
-            ec.service.job("IndexDataFeedDocuments").parameter("dataFeedId", "PopCommerceSearch").run()
-            ec.service.job("IndexDataFeedDocuments").parameter("dataFeedId", "PopCommerceSales").run()
+            ec.service.job("IndexDataFeedDocuments").parameter("dataFeedId", "MantleSearch").run()
+            ec.service.job("IndexDataFeedDocuments").parameter("dataFeedId", "MantleSales").run()
 
             // resume the recalculate_GlAccountOrgSummaries and check_AllPartyDuplicates jobs
             ec.service.sync().name("update#moqui.service.job.ServiceJob")

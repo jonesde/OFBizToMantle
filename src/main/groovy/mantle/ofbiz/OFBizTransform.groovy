@@ -326,6 +326,7 @@ class OFBizTransform {
         conf.addTransformer("OrderItemShipGrpInvRes", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
             // needs: Asset, OrderItem
             String productId = Moqui.executionContext.entity.find("mantle.product.asset.Asset").condition("assetId", val.inventoryItemId).one()?.productId
+            // TODO: populate quantityNotAvailable and quantityNotIssued
             et.addEntry(new SimpleEntry("mantle.product.issuance.AssetReservation", [assetReservationId:UUID.randomUUID().toString(),
                     assetId:val.inventoryItemId, orderId:val.orderId, orderItemSeqId:val.orderItemSeqId, productId:productId,
                     quantity:val.quantity, quantityNotAvailable:val.quantityNotAvailable, reservedDate:val.reservedDatetime,

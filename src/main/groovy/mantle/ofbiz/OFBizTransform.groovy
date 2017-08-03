@@ -433,8 +433,9 @@ class OFBizTransform {
             // NOTE: not mapping visitId, productStoreId, billingAccountId, syncStatusId (though could be at some point)
         }})
         conf.addTransformer("OrderItemShipGroup", new Transformer() { void transform(EntryTransform et) { Map<String, Object> val = et.entry.etlValues
-            def partTotal = Moqui.executionContext.entity.find("mantle.order.OrderHeader").condition("orderId", val.orderId).one()?.grandTotal
-            et.addEntry(new SimpleEntry("mantle.order.OrderPart", [orderId:val.orderId,
+            EntityValue orderHeader = Moqui.executionContext.entity.find("mantle.order.OrderHeader").condition("orderId", val.orderId).one()
+            def partTotal = orderHeader?.grandTotal
+            et.addEntry(new SimpleEntry("mantle.order.OrderPart", [orderId:val.orderId, statusId:orderHeader.statusId,
                     orderPartSeqId:((String) val.shipGroupSeqId).padLeft(5, '0'),
                     shipmentMethodEnumId:map('shipmentMethodTypeId', (String) val.shipmentMethodTypeId),
                     vendorPartyId:val.vendorPartyId/*usually null, expected from OrderRole*/, carrierPartyId:val.carrierPartyId,

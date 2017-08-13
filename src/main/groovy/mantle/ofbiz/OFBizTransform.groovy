@@ -561,9 +561,7 @@ class OFBizTransform {
             if (orderPart?.otherPartyOrderId) {
                 EntityValue invoice = Moqui.executionContext.entity.find("mantle.account.invoice.Invoice").condition("invoiceId", val.invoiceId).one()
                 if (invoice != null) {
-                    if (invoice.referenceNumber && !((String) invoice.referenceNumber).contains((String) orderPart.otherPartyOrderId)) {
-                        invoice.referenceNumber = ((String) invoice.referenceNumber) + ', ' + orderPart.otherPartyOrderId
-                    } else { invoice.referenceNumber = orderPart.otherPartyOrderId }
+                    invoice.otherPartyOrderId = orderPart.otherPartyOrderId
                     invoice.update()
                 }
             }

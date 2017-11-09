@@ -137,7 +137,7 @@ class OFBizFieldMap {
         paymentTypeId:[COMMISSION_PAYMENT:'PtInvoicePayment', CUSTOMER_DEPOSIT:'PtPrePayment', CUSTOMER_PAYMENT:'PtInvoicePayment',
                 CUSTOMER_REFUND:'PtRefund', DISBURSEMENT:'PtDisbursement', SALES_TAX_PAYMENT:'PtInvoicePayment',
                 TAX_PAYMENT:'PtInvoicePayment', VENDOR_PAYMENT:'PtInvoicePayment', VENDOR_PREPAY:'PtPrePayment',
-                ADJUSTMENT:'PtInvoicePayment', RECEIPT:'PtPrePayment', GC_DEPOSIT:'PtPrePayment', GC_WITHDRAWAL:'PtDisbursement',
+                ADJUSTMENT:'PtInvoicePayment', RECEIPT:'PtInvoicePayment', GC_DEPOSIT:'PtFinancialAccount', GC_WITHDRAWAL:'PtFinancialAccount',
                 INCOME_TAX_PAYMENT:'PtInvoicePayment', INTEREST_RECEIPT:'PtInvoicePayment', PAY_CHECK:'PtInvoicePayment',
                 PAYROLL_TAX_PAYMENT:'PtInvoicePayment', PAYROL_PAYMENT:'PtInvoicePayment'],
                 // POS_PAID_IN, POS_PAID_OUT

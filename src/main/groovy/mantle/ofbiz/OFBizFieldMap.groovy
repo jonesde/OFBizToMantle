@@ -155,7 +155,7 @@ class OFBizFieldMap {
         cardType:[AmericanExpress:'CctAmericanExpress', Discover:'CctDiscover', MasterCard:'CctMastercard', Visa:'CctVisa'],
         paymentStatusId:[PAYMENT_AUTHORIZED:'PmntAuthorized', PAYMENT_CANCELLED:'PmntCancelled', PAYMENT_DECLINED:'PmntDeclined',
                 PAYMENT_NOT_AUTH:'PmntPromised', PAYMENT_NOT_RECEIVED:'PmntPromised', PAYMENT_RECEIVED:'PmntDelivered',
-                PAYMENT_REFUNDED:'PmntRefunded', PAYMENT_SETTLED:'PmntDelivered',
+                PAYMENT_REFUNDED:'PmntDelivered', PAYMENT_SETTLED:'PmntDelivered',
                 PMNT_CANCELLED:'PmntCancelled', PMNT_CONFIRMED:'PmntConfirmed', PMNT_NOT_PAID:'PmntPromised',
                 PMNT_RECEIVED:'PmntDelivered', PMNT_SENT:'PmntDelivered', PMNT_VOID:'PmntVoid'],
         paymentServiceTypeEnumId:[PRDS_PAY_AUTH:'PgoAuthorize', PRDS_PAY_AUTH_VERIFY:'PgoValidateAuthorize',

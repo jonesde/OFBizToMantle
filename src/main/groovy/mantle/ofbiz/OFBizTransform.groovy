@@ -756,7 +756,7 @@ class OFBizTransform {
             BigDecimal amount = new BigDecimal((String) val.amount)
 
             EntityValue payment = Moqui.executionContext.entity.find("mantle.account.payment.Payment").condition("paymentId", paymentId).one()
-            if (((String) payment.statusId) in ["PmntCancelled", "PmntVoid", "PmntDeclined", "PmntRefunded"]) return
+            if (((String) payment.statusId) in ["PmntCancelled", "PmntVoid", "PmntDeclined"]) return
             EntityList paymentAppls = Moqui.executionContext.entity.find("mantle.account.payment.PaymentApplication")
                     .condition("paymentId", paymentId).condition("invoiceId", "!=", null).orderBy("-amountApplied").list()
             if (paymentAppls.size() == 0) {

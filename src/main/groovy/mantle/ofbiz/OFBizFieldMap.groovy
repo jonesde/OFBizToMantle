@@ -600,5 +600,5 @@ class OFBizFieldMap {
             '902000':'732000000', // STATE INCOME TAX
             '903000':'733000000', // LOCAL INCOME TAX
         ]
-    ]
+    ] as LinkedHashMap<String, LinkedHashMap<String, String>>
 }

@@ -21,7 +21,7 @@ def frameworkDir = file(moquiDir.absolutePath + '/framework')
 
 repositories {
     flatDir name: 'localLib', dirs: frameworkDir.absolutePath + '/lib'
-    jcenter()
+    mavenCentral()
 }
 
 // Log4J has annotation processors, disable to avoid warning
